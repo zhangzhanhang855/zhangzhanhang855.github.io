@@ -2,22 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>斗地主豪华人机对战</title>
+<title>斗地主终极专业版</title>
 <style>
-body{background:linear-gradient(#0a3d2e,#021);color:#fff;font-family:Arial;text-align:center}
-.table{max-width:900px;margin:auto;padding:20px}
-.card{display:inline-block;padding:8px 12px;margin:4px;border-radius:8px;border:1px solid #fff;background:#1e8449;cursor:pointer;transition:.2s}
-.card:hover{transform:translateY(-4px)}
-.selected{background:#ffd966;color:#000}
-.panel{background:rgba(0,0,0,.4);padding:15px;border-radius:16px;margin:10px}
-button{padding:10px 18px;border:none;border-radius:10px;background:#f1c40f;font-weight:bold;cursor:pointer}
-button:hover{opacity:.85}
+body{margin:0;background:radial-gradient(circle,#164,#021);color:#fff;font-family:Segoe UI,Arial;text-align:center}
+.table{max-width:1200px;margin:auto;padding:20px}
+.panel{background:rgba(0,0,0,.6);padding:16px;border-radius:18px;margin:12px;box-shadow:0 0 18px #000}
+.card{display:inline-block;padding:10px 14px;margin:4px;border-radius:10px;border:1px solid #fff;background:linear-gradient(#2ecc71,#166);cursor:pointer;transition:.2s;font-weight:bold;user-select:none}
+.card:hover{transform:translateY(-6px)}
+.selected{background:linear-gradient(#ffe066,#f1c40f);color:#000}
+button{padding:12px 22px;border:none;border-radius:12px;background:linear-gradient(#f9d423,#f1c40f);font-weight:bold;cursor:pointer;box-shadow:0 4px 10px #000}
+.status{font-size:18px}
+.coins{font-size:22px;color:#ffd966}
 </style>
 </head>
 <body>
 <div class="table">
-<h1>🃏 斗地主豪华版</h1>
-<h2>金币：<span id="coins">1000</span></h2>
+<h1>🃏 斗地主终极专业版</h1>
+<div class="coins">💰 金币：<span id="coins">1000</span></div>
 
 <div class="panel">
 <h3>你的手牌</h3>
@@ -26,45 +27,80 @@ button:hover{opacity:.85}
 
 <div class="panel">
 <button onclick="autoSort()">自动理牌</button>
-<button onclick="playCard()">出牌</button>
-<button onclick="passTurn()">不要</button>
+<button onclick="playCards()">出牌</button>
+<button onclick="passTurn()">要不起</button>
 <button onclick="startGame()">新一局</button>
 </div>
 
-<div class="panel">
-<h3>电脑A剩余：<span id="ai1">17</span> 张 | 电脑B剩余：<span id="ai2">17</span> 张</h3>
-<h3>当前牌：<span id="current">无</span></h3>
+<div class="panel status">
+地主：<span id="landlord">未定</span> ｜ 当前回合：<span id="turn">你</span><br>
+牌型：<span id="currentType">无</span> ｜ 上家点数：<span id="currentRank">-</span>
 </div>
 </div>
 
+<audio id="soundPlay" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+<audio id="soundBomb" src="https://actions.google.com/sounds/v1/explosions/explosion.ogg"></audio>
+
 <script>
 const ranks=['3','4','5','6','7','8','9','10','J','Q','K','A','2','小王','大王'];
-let deck=[],playerHand=[],ai1Hand=[],ai2Hand=[];
-let currentCard=null,selectedIndex=null,coins=1000;
+let deck=[],playerHand=[],ai1Hand=[],ai2Hand=[],bottom=[];
+let selected=[],currentType=null,currentRank=null,currentPlayer='player';
+let landlord='player',coins=1000,multiplier=1;
+
+function rankValue(c){return ranks.indexOf(c)}
 
 function buildDeck(){deck=[];for(let i=0;i<13;i++)for(let j=0;j<4;j++)deck.push(ranks[i]);deck.push('小王','大王');}
 function shuffle(){for(let i=deck.length-1;i>0;i--){let r=Math.floor(Math.random()*(i+1));[deck[i],deck[r]]=[deck[r],deck[i]];}}
 
-function startGame(){buildDeck();shuffle();playerHand=deck.slice(0,17);ai1Hand=deck.slice(17,34);ai2Hand=deck.slice(34,51);currentCard=null;autoSort();render();}
-
-function rankValue(c){return ranks.indexOf(c)}
+function startGame(){buildDeck();shuffle();playerHand=deck.slice(0,17);ai1Hand=deck.slice(17,34);ai2Hand=deck.slice(34,51);bottom=deck.slice(51);
+ landlord=['player','ai1','ai2'][Math.floor(Math.random()*3)];
+ if(landlord==='player')playerHand.push(...bottom);
+ if(landlord==='ai1')ai1Hand.push(...bottom);
+ if(landlord==='ai2')ai2Hand.push(...bottom);
+ multiplier=1;currentType=null;currentRank=null;currentPlayer=landlord;
+ autoSort();render();}
 
 function autoSort(){playerHand.sort((a,b)=>rankValue(a)-rankValue(b));render();}
 
-function render(){const p=document.getElementById('player');p.innerHTML='';playerHand.forEach((c,i)=>{const d=document.createElement('div');d.className='card'+(selectedIndex===i?' selected':'');d.innerText=c;d.onclick=()=>{selectedIndex=i;render();};p.appendChild(d);});
- document.getElementById('ai1').innerText=ai1Hand.length;
- document.getElementById('ai2').innerText=ai2Hand.length;
- document.getElementById('current').innerText=currentCard||'无';
+function toggleSelect(i){const idx=selected.indexOf(i);idx>-1?selected.splice(idx,1):selected.push(i);render();}
+
+function render(){const p=document.getElementById('player');p.innerHTML='';playerHand.forEach((c,i)=>{const d=document.createElement('div');d.className='card'+(selected.includes(i)?' selected':'');d.innerText=c;d.onclick=()=>toggleSelect(i);
+ d.addEventListener('touchstart',()=>toggleSelect(i));p.appendChild(d);});
+ document.getElementById('turn').innerText=currentPlayer==='player'?'你':'电脑';
+ document.getElementById('landlord').innerText=landlord==='player'?'你':landlord==='ai1'?'电脑A':'电脑B';
+ document.getElementById('currentType').innerText=currentType||'无';
+ document.getElementById('currentRank').innerText=currentRank??'-';
  document.getElementById('coins').innerText=coins;}
 
-function playCard(){if(selectedIndex===null)return;const card=playerHand[selectedIndex];if(currentCard&&rankValue(card)<=rankValue(currentCard)){alert('必须更大！');return;}currentCard=card;playerHand.splice(selectedIndex,1);selectedIndex=null;aiTurn(ai1Hand);aiTurn(ai2Hand);checkWin();render();}
+function getCards(){return selected.map(i=>playerHand[i]).sort((a,b)=>rankValue(a)-rankValue(b));}
 
-function aiTurn(hand){let playable=hand.filter(c=>!currentCard||rankValue(c)>rankValue(currentCard));if(playable.length===0)return;playable.sort((a,b)=>rankValue(a)-rankValue(b));currentCard=playable[0];hand.splice(hand.indexOf(currentCard),1);}
+function isBomb(c){return c.length===4&&rankValue(c[0])===rankValue(c[3]);}
+function isKingBomb(c){return c.length===2&&c.includes('小王')&&c.includes('大王');}
+function isPair(c){return c.length===2&&rankValue(c[0])===rankValue(c[1]);}
+function isStraight(c){if(c.length<5)return false;for(let i=1;i<c.length;i++)if(rankValue(c[i])!==rankValue(c[i-1])+1)return false;return true;}
 
-function passTurn(){currentCard=null;}
+function detect(c){if(isKingBomb(c))return '王炸';if(isBomb(c))return '炸弹';if(c.length===1)return '单张';if(isPair(c))return '对子';if(isStraight(c))return '顺子';return null;}
 
-function checkWin(){if(playerHand.length===0){coins+=100;alert('🎉 你赢了！+100金币');startGame();}
- if(ai1Hand.length===0||ai2Hand.length===0){coins-=50;alert('😵 电脑赢了！-50金币');startGame();}}
+function stronger(type,rank){if(type==='王炸')return true;if(type==='炸弹'&&currentType!=='王炸')return true;if(type===currentType&&rank>currentRank)return true;return false;}
+
+function playCards(){if(currentPlayer!=='player')return;const c=getCards();if(!c.length)return;const type=detect(c);if(!type){alert('❌ 出牌不合法');return;}const rank=rankValue(c[c.length-1]);
+ if(currentType&&!stronger(type,rank)){alert('⚠ 没有压过上家');return;}
+ if(type.includes('炸')){multiplier*=2;document.getElementById('soundBomb').play();}
+ else document.getElementById('soundPlay').play();
+ currentType=type;currentRank=rank;
+ selected.sort((a,b)=>b-a).forEach(i=>playerHand.splice(i,1));selected=[];
+ nextAI();render();}
+
+function nextAI(){currentPlayer='ai';setTimeout(()=>aiMove(ai1Hand),600)}
+
+function aiMove(hand){if(hand.length===0)return;
+ hand.sort((a,b)=>rankValue(a)-rankValue(b));
+ let play=[hand[0]];let type='单张';let rank=rankValue(play[0]);
+ if(!currentType||stronger(type,rank)){
+ currentType=type;currentRank=rank;hand.splice(0,1);
+ }currentPlayer='player';render();}
+
+function passTurn(){if(currentPlayer!=='player')return;currentType=null;currentRank=null;nextAI();}
 
 startGame();
 </script>
