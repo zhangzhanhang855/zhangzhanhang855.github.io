@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>人机扑克对战小游戏</title>
+<style>
+body { font-family: Arial, sans-serif; background:#0b3d2e; color:white; text-align:center; }
+.card { display:inline-block; border:1px solid #fff; padding:10px; margin:5px; border-radius:8px; background:#145a32; }
+button { padding:10px 20px; margin:10px; border:none; border-radius:8px; cursor:pointer; }
+#log { max-height:200px; overflow:auto; background:#022; padding:10px; }
+</style>
+</head>
+<body>
+<h1>🃏 人机扑克对战小游戏</h1>
+<p>规则：比大小（A最大，2最小），一局一张牌</p>
+<div>
+<h2>你的手牌</h2>
+<div id="player"></div>
+<h2>电脑手牌</h2>
+<div id="ai"></div>
+</div>
+<button onclick="drawCard()">抽牌对战</button>
+<button onclick="resetGame()">重置游戏</button>
+<h3>比分：你 <span id="ps">0</span> : 电脑 <span id="as">0</span></h3>
+<div id="log"></div>
+<script>
+const suits = ['♠','♥','♦','♣'];
+const values = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+let ps=0, as=0;
+function randomCard(){
+  const v = values[Math.floor(Math.random()*values.length)];
+  const s = suits[Math.floor(Math.random()*suits.length)];
+  return {v,s,score:values.indexOf(v)};
+}
+function showCard(el, card){
+  el.innerHTML = `<div class='card'>${card.v}${card.s}</div>`;
+}
+function drawCard(){
+  const p = randomCard();
+  const a = randomCard();
+  showCard(player,p);
+  showCard(ai,a);
+  let msg = `你抽到 ${p.v}${p.s} ，电脑抽到 ${a.v}${a.s} → `;
+  if(p.score>a.score){ ps++; msg+='你赢了！'; }
+  else if(p.score<a.score){ as++; msg+='电脑赢了！'; }
+  else msg+='平局！';
+  psEl.textContent=ps; asEl.textContent=as;
+  log.innerHTML = msg + '<br>' + log.innerHTML;
+}
+function resetGame(){ ps=0; as=0; psEl.textContent=0; asEl.textContent=0; player.innerHTML=''; ai.innerHTML=''; log.innerHTML='已重置'; }
+const player = document.getElementById('player');
+const ai = document.getElementById('ai');
+const psEl = document.getElementById('ps');
+const asEl = document.getElementById('as');
+const log = document.getElementById('log');
+</script>
+</body>
+</html>
