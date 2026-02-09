@@ -23,6 +23,15 @@
       text-align: center;
     }
 
+    .cover {
+      width: 100%;
+      height: 180px;
+      background: #333;
+      margin-bottom: 12px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+
     .title {
       margin-bottom: 10px;
       font-size: 18px;
@@ -63,6 +72,7 @@
 <body>
 
 <div class="player">
+  <img src="" id="cover" class="cover" alt="歌曲封面" />
   <div class="title" id="songTitle">加载中...</div>
 
   <div class="progress-container" id="progressContainer">
@@ -80,27 +90,22 @@
 <audio id="audio"></audio>
 
 <script>
-  // 替换为你GitHub仓库raw直链地址
+  // 替换为你GitHub仓库raw直链地址和封面
   const songs = [
     {
-      name: "Faded",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Faded - Alan Walker.mp3"
+      name: "Faded - Alan Walker",
+      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Faded - Alan Walker.mp3",
+      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Faded - Alan Walker.jpg"
     },
     {
-      name: "Heading Home",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Heading Home - Alan Walker [Normal Quality].mp3"
+      name: "Heading Home - Alan Walker",
+      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Heading Home - Alan Walker [Normal Quality].mp3",
+      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Heading Home - Alan Walker [Normal Quality].jpg"
     },
     {
-      name: "Sunburst",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst - Tobu.mp3"
-    },
-    {
-      name: "The Sky High",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/The Sky High - Elektronomia.mp3"
-    },
-    {
-      name: "365",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/365.mp3"
+      name: "Sunburst - Tobu",
+      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst - Tobu.mp3",
+      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst - Tobu.jpg"
     }
   ];
 
@@ -109,6 +114,7 @@
 
   const audio = document.getElementById("audio");
   const title = document.getElementById("songTitle");
+  const cover = document.getElementById("cover");
   const progress = document.getElementById("progress");
   const playBtn = document.getElementById("playBtn");
   const loopBtn = document.getElementById("loopBtn");
@@ -117,6 +123,7 @@
   function loadSong(i) {
     audio.src = songs[i].url;
     title.textContent = songs[i].name;
+    cover.src = songs[i].cover;
   }
 
   function togglePlay() {
