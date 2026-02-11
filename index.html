@@ -298,6 +298,197 @@
       opacity: 1;
     }
 
+    /* 音量控制 */
+    .volume-control {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      margin-bottom: 15px;
+      border: 1px solid rgba(0, 229, 255, 0.1);
+    }
+
+    .volume-icon {
+      font-size: 18px;
+      min-width: 25px;
+      text-align: center;
+    }
+
+    .volume-slider {
+      flex: 1;
+      height: 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(68, 68, 68, 0.6);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+      transition: all 0.2s;
+    }
+
+    .volume-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
+    }
+
+    .volume-slider::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+      transition: all 0.2s;
+    }
+
+    .volume-slider::-moz-range-thumb:hover {
+      transform: scale(1.3);
+      box-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
+    }
+
+    .volume-value {
+      min-width: 35px;
+      text-align: right;
+      font-size: 12px;
+      color: #00e5ff;
+      font-weight: 600;
+    }
+
+    /* 下载按钮 */
+    .download-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .download-btn {
+      background: linear-gradient(135deg, #ff6b9d 0%, #f06595 100%);
+      border: none;
+      color: #fff;
+      padding: 9px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 140px;
+      justify-content: center;
+    }
+
+    .download-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 107, 157, 0.5);
+    }
+
+    .download-btn:active {
+      transform: translateY(0);
+    }
+
+    .download-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .download-btn.cover {
+      background: linear-gradient(135deg, #ffa502 0%, #ff8c42 100%);
+      box-shadow: 0 4px 12px rgba(255, 165, 2, 0.3);
+    }
+
+    .download-btn.cover:hover {
+      box-shadow: 0 6px 20px rgba(255, 165, 2, 0.5);
+    }
+
+    /* 额外功能面板 */
+    .extra-features {
+      padding-top: 15px;
+      border-top: 1px solid rgba(0, 229, 255, 0.1);
+    }
+
+    .feature-section {
+      margin-bottom: 15px;
+    }
+
+    .feature-label {
+      font-size: 12px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    /* 加载状态提示 */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 229, 255, 0.95);
+      color: #000;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      animation: slideInUp 0.3s ease;
+      box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);
+      z-index: 1000;
+    }
+
+    .toast.success {
+      background: rgba(76, 175, 80, 0.95);
+    }
+
+    .toast.error {
+      background: rgba(244, 67, 54, 0.95);
+    }
+
+    @keyframes slideInUp {
+      from {
+        transform: translateY(100px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOutDown {
+      from {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateY(100px);
+        opacity: 0;
+      }
+    }
+
+    .toast.hide {
+      animation: slideOutDown 0.3s ease forwards;
+    }
+
     /* 响应式设计 */
     @media (max-width: 768px) {
       .container {
@@ -310,6 +501,19 @@
 
       .playlist {
         max-width: 100%;
+      }
+
+      .download-controls {
+        flex-direction: column;
+      }
+
+      .download-btn {
+        min-width: 100%;
+      }
+
+      .toast {
+        left: 20px;
+        right: 20px;
       }
     }
 
@@ -387,6 +591,34 @@
     <div class="controls">
       <button onclick="toggleLoop()" id="loopBtn">🔁 单曲循环</button>
     </div>
+
+    <!-- 额外功能 -->
+    <div class="extra-features">
+      <!-- 音量控制 -->
+      <div class="feature-section">
+        <span class="feature-label">音量</span>
+        <div class="volume-control">
+          <span class="volume-icon">🔊</span>
+          <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70">
+          <span class="volume-value" id="volumeValue">70%</span>
+        </div>
+      </div>
+
+      <!-- 下载功能 -->
+      <div class="feature-section">
+        <span class="feature-label">下载</span>
+        <div class="download-controls">
+          <button class="download-btn" onclick="downloadAudio()">
+            <span>⬇️</span>
+            <span>音频</span>
+          </button>
+          <button class="download-btn cover" onclick="downloadCover()">
+            <span>⬇️</span>
+            <span>封面</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- 歌曲列表 -->
@@ -413,7 +645,7 @@
     {
       name: "Sunburst - Tobu",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst - Tobu.mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst - Tobu:Itro.jpeg"
+      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburstï¼ˆäº'éš™é˜³å…‰ï¼‰ - Tobu:Itro.jpeg"
     },
     {
       name: "World of Walker: Rise of the drones - Alan Walker",
@@ -451,6 +683,8 @@
   const currentTimeEl = document.getElementById("currentTime");
   const durationEl = document.getElementById("duration");
   const playlistContainer = document.getElementById("playlistContainer");
+  const volumeSlider = document.getElementById("volumeSlider");
+  const volumeValue = document.getElementById("volumeValue");
 
   // 格式化时间
   function formatTime(time) {
@@ -458,6 +692,86 @@
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  // 显示提示信息
+  function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('hide');
+      setTimeout(() => toast.remove(), 300);
+    }, 2500);
+  }
+
+  // 音量控制
+  volumeSlider.addEventListener('input', (e) => {
+    const volume = e.target.value;
+    audio.volume = volume / 100;
+    volumeValue.textContent = `${volume}%`;
+  });
+
+  // 初始化音量
+  audio.volume = 0.7;
+
+  // 下载文件的通用函数
+  function downloadFile(url, filename) {
+    const xhr = new XMLHttpRequest();
+    xhr.responseType = 'blob';
+    
+    xhr.onload = function() {
+      const blob = xhr.response;
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+      showToast(`已下载: ${filename}`, 'success');
+    };
+
+    xhr.onerror = function() {
+      showToast('下载失败，请检查网络连接', 'error');
+    };
+
+    xhr.onprogress = function(e) {
+      if (e.lengthComputable) {
+        const percentComplete = (e.loaded / e.total) * 100;
+        // 可以在这里添加进度条显示
+      }
+    };
+
+    try {
+      xhr.open('GET', url, true);
+      xhr.send();
+    } catch (error) {
+      showToast('无法下载文件，可能存在跨域问题', 'error');
+    }
+  }
+
+  // 下载音频
+  function downloadAudio() {
+    if (index >= 0 && index < songs.length) {
+      const song = songs[index];
+      const filename = `${song.name}.mp3`;
+      showToast('正在下载音频...', 'success');
+      downloadFile(song.url, filename);
+    }
+  }
+
+  // 下载封面
+  function downloadCover() {
+    if (index >= 0 && index < songs.length) {
+      const song = songs[index];
+      const filename = `${song.name}-cover.jpg`;
+      showToast('正在下载封面...', 'success');
+      downloadFile(song.cover, filename);
+    }
   }
 
   // 加载歌曲
