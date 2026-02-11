@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ZZH Music Player - 音乐播放器</title>
   <style>
     /* 黄金分割常数 */
@@ -26,9 +26,9 @@
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      padding: var(--golden-spacing);
+      padding: var(--base-spacing);
       overflow-y: auto;
-      overflow-x: hidden;
+      overflow-x: auto;
     }
 
     /* 动态背景 */
@@ -50,12 +50,12 @@
       opacity: 1;
     }
 
-    /* 主容器 - 黄金分割两列布局 */
+    /* 主容器 - 自适应三列布局 */
     .container {
       display: grid;
-      grid-template-columns: 1fr calc(1fr * var(--golden-ratio));
+      grid-template-columns: 1fr calc(1fr * var(--golden-ratio)) calc(1.2fr);
       gap: calc(var(--base-spacing) + 8px);
-      max-width: 1400px;
+      max-width: 1800px;
       width: 100%;
       position: relative;
       z-index: 1;
@@ -67,13 +67,105 @@
       display: flex;
       flex-direction: column;
       gap: calc(var(--base-spacing) - 2px);
+      min-width: 280px;
     }
 
-    /* 右列：列表和歌词 */
+    /* 中列：列表和歌词 */
+    .middle-column {
+      display: flex;
+      flex-direction: column;
+      gap: calc(var(--base-spacing) - 2px);
+    }
+
+    /* 右列：MV播放器 */
     .right-column {
       display: flex;
       flex-direction: column;
       gap: calc(var(--base-spacing) - 2px);
+    }
+
+    /* MV容器 */
+    .mv-panel {
+      width: 100%;
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      padding: calc(var(--base-spacing) * 1.1);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
+      border: 1px solid rgba(0, 229, 255, 0.1);
+      animation: slideIn 0.6s ease;
+      display: flex;
+      flex-direction: column;
+      gap: var(--base-spacing);
+      overflow: hidden;
+    }
+
+    .mv-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #00e5ff;
+      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
+      display: flex;
+      align-items: center;
+      gap: calc(var(--base-spacing) / 2.618);
+    }
+
+    .mv-title::before {
+      content: "🎬";
+      font-size: 18px;
+    }
+
+    .youtube-container {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #000;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+    }
+
+    .youtube-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 12px;
+    }
+
+    .mv-toggle-btn {
+      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      border: none;
+      color: #000;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
+      width: 100%;
+    }
+
+    .mv-toggle-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
+    }
+
+    .mv-panel.hidden {
+      display: none;
+    }
+
+    .mv-info {
+      font-size: 12px;
+      color: #888;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid #00e5ff;
     }
 
     /* 播放器主体 */
@@ -260,6 +352,20 @@
     }
 
     .secondary-controls button.shuffle-btn.active {
+      background: linear-gradient(135deg, #ff1493 0%, #c71585 100%);
+      box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
+    }
+
+    .secondary-controls button.mv-btn {
+      background: linear-gradient(135deg, #ff6b9d 0%, #f06595 100%);
+      box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
+    }
+
+    .secondary-controls button.mv-btn:hover {
+      box-shadow: 0 6px 20px rgba(255, 107, 157, 0.5);
+    }
+
+    .secondary-controls button.mv-btn.active {
       background: linear-gradient(135deg, #ff1493 0%, #c71585 100%);
       box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
     }
@@ -679,8 +785,51 @@
       animation: slideOutDown 0.3s ease forwards;
     }
 
-    /* 响应式设计 - 平板 */
-    @media (max-width: 1024px) {
+    /* iPad 横屏适配 (1024px 以上) */
+    @media (min-width: 1024px) and (max-width: 1400px) {
+      .container {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--golden-spacing);
+      }
+
+      .right-column {
+        grid-column: 2;
+        grid-row: 1 / 3;
+      }
+
+      .middle-column {
+        grid-column: 2;
+        grid-row: 2;
+        display: none;
+      }
+
+      .playlist {
+        max-height: 500px;
+      }
+
+      .lyrics-panel {
+        max-height: 450px;
+      }
+    }
+
+    /* iPad 横屏大屏幕 (1400px - 1600px) */
+    @media (min-width: 1400px) and (max-width: 1600px) {
+      .container {
+        grid-template-columns: 1fr calc(1fr * var(--golden-ratio)) 1fr;
+        gap: var(--golden-spacing);
+      }
+
+      .mv-panel {
+        max-height: 650px;
+      }
+
+      .playlist {
+        max-height: 500px;
+      }
+    }
+
+    /* 平板竖屏 */
+    @media (max-width: 1023px) {
       .container {
         grid-template-columns: 1fr;
         gap: var(--golden-spacing);
@@ -690,9 +839,29 @@
         max-width: 350px;
         margin: 0 auto;
       }
+
+      .mv-panel {
+        max-height: 500px;
+      }
+
+      .playlist {
+        max-height: 400px;
+      }
+
+      .lyrics-panel {
+        max-height: 400px;
+      }
+
+      .lyrics-container {
+        height: 320px;
+      }
+
+      .youtube-container {
+        padding-bottom: 56.25%;
+      }
     }
 
-    /* 响应式设计 - 手机 */
+    /* 手机 */
     @media (max-width: 640px) {
       body {
         padding: var(--base-spacing);
@@ -723,6 +892,12 @@
         min-width: 50px;
       }
 
+      .secondary-controls button {
+        font-size: 10px;
+        padding: 5px 8px;
+        min-width: 45px;
+      }
+
       .playlist {
         max-height: 400px;
       }
@@ -733,6 +908,10 @@
 
       .lyrics-container {
         height: 320px;
+      }
+
+      .mv-panel {
+        max-height: 450px;
       }
 
       .toast {
@@ -781,6 +960,7 @@
       <div class="secondary-controls">
         <button onclick="toggleLoop()" id="loopBtn">🔁 循环</button>
         <button class="shuffle-btn" onclick="toggleShuffle()" id="shuffleBtn">🔀 随机</button>
+        <button class="mv-btn" onclick="toggleMVPanel()" id="mvShowBtn">🎬 MV</button>
         <button class="lyrics-btn" onclick="toggleLyricsPanel()" id="lyricsShowBtn">📜 歌词</button>
       </div>
 
@@ -805,8 +985,8 @@
     </div>
   </div>
 
-  <!-- 右列：歌曲列表和歌词 -->
-  <div class="right-column">
+  <!-- 中列：歌曲列表和歌词 -->
+  <div class="middle-column">
     <!-- 歌曲列表 -->
     <div class="playlist">
       <div class="playlist-title">播放列表</div>
@@ -824,6 +1004,25 @@
       </div>
     </div>
   </div>
+
+  <!-- 右列：MV播放器 -->
+  <div class="right-column">
+    <div class="mv-panel" id="mvPanel">
+      <div class="mv-title">音乐视频 (MV)</div>
+      <div class="youtube-container" id="youtubeContainer">
+        <iframe 
+          id="youtubeFrame"
+          src="about:blank" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen>
+        </iframe>
+      </div>
+      <div class="mv-info" id="mvInfo">
+        💡 提示：点击播放列表中的歌曲，将自动加载对应的MV
+      </div>
+      <button class="mv-toggle-btn" onclick="toggleMVPanel()">隐藏MV</button>
+    </div>
+  </div>
 </div>
 
 <audio id="audio"></audio>
@@ -834,6 +1033,7 @@
       name: "Faded - Alan Walker",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Faded - Alan Walker.mp3",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Faded - Alan Walker.jpeg",
+      youtubeId: "60ItHLz5WEA",
       lyrics: `[00:00.85]Faded (憔悴不堪) - Alan Walker (艾伦·沃克)
 [00:01.44]
 [00:01.44]Written by：Alan Walker
@@ -898,6 +1098,7 @@
       name: "Heading Home - Alan Walker",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Heading Home - Alan Walker [Normal Quality].mp3",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Heading Home - Alan Walker:Ruben.jpeg",
+      youtubeId: "iVX_uBvb8nQ",
       lyrics: `[00:00.0]Heading Home - Alan Walker/Ruben
 [00:03.05]
 [00:03.05]Lyrics by：Jesper Borgen/Magnus Bertelsen/Gunnar Greve/Øyvind Sauvik
@@ -981,12 +1182,14 @@
       name: "Sunburst - Tobu",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst - Tobu.mp3",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst（云隙阳光） - Tobu:Itro.jpeg",
+      youtubeId: "KFpZCkxPHx4",
       lyrics: `[00:00.00]Empty`
     },
     {
       name: "World of Walker: Rise of the drones - Alan Walker",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Rise of the drones.mp3",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/World of Walker: Rise of the Drones - Alan Walker.jpeg",
+      youtubeId: "D1cqIZPrvXo",
       lyrics: `[00:00.0]World of Walker: Rise of the Drones - Alan Walker (艾兰·沃克)
 [01:02.97]Lyrics by：Gunnar Greve/Fredrik Borch Olsen/Mats Lie Skåre/Marcus Arnbekk/Phoebe Ryan
 [02:05.95]
@@ -1001,6 +1204,7 @@
       name: "The Sky High - Elektronomia",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/The Sky High - Elektronomia.mp3",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/The Sky High - Elektronomia.jpeg",
+      youtubeId: "dAVOy1zj5iU",
       lyrics: `[00:04.34]I'm laying where the stars shine so bright
 [00:08.3]Dreams of younger days keep drifting by
 [00:11.87]Oh, how I wish to turn the hands of time, tonight
@@ -1025,6 +1229,7 @@
       name: "365",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/365.mp3",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/365 - Zedd:Katy Perry.jpeg",
+      youtubeId: "VJHp-Dw0BzY",
       lyrics: `[00:00.0]365 - Zedd/Katy Perry
 [00:01.48]
 [00:01.48]Lyrics by：Anton Zaslavski/Katy Perry/Caroline Ailin/Corey Sanders/Daniel Davidsen/Peter Wallevik/Mich Hansen
@@ -1085,6 +1290,7 @@
       name: "BARRETE!",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/DERRETE!.mp3",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/BARRETE! - CHASHKAKEFIRA:D4C.jpeg",
+      youtubeId: "",
       lyrics: `[00:00.00]Empty`
     },
     
@@ -1092,12 +1298,7 @@
       name: "好玩吗孩子",
       url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/ScreenRecording_02-11-2026 13-57-19_1.m4a",
       cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/IMG_3383.jpeg",
-      lyrics: `[00:00.00]Empty`
-    },
-    {
-      name: "纯净的蒸馏水真好喝",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/ScreenRecording_02-11-2026 18-38-59_1.m4a",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/IMG_3387.jpeg",
+      youtubeId: "",
       lyrics: `[00:00.00]Empty`
     }
   ];
@@ -1105,8 +1306,9 @@
   let index = 0;
   let isPlaying = false;
   let lyricsVisible = true;
+  let mvVisible = true;
   let isShuffleMode = false;
-  let playedIndices = []; // 记录已播放过的歌曲索引（随机模式）
+  let playedIndices = [];
 
   const audio = document.getElementById("audio");
   const title = document.getElementById("songTitle");
@@ -1126,6 +1328,10 @@
   const lyricsPanel = document.getElementById("lyricsPanel");
   const lyricsToggle = document.getElementById("lyricsToggle");
   const lyricsShowBtn = document.getElementById("lyricsShowBtn");
+  const youtubeFrame = document.getElementById("youtubeFrame");
+  const mvPanel = document.getElementById("mvPanel");
+  const mvShowBtn = document.getElementById("mvShowBtn");
+  const mvInfo = document.getElementById("mvInfo");
 
   // 格式化时间
   function formatTime(time) {
@@ -1148,11 +1354,29 @@
     }, 2500);
   }
 
+  // =============== MV相关 ===============
+  function loadYouTubeMV(youtubeId) {
+    if (!youtubeId) {
+      youtubeFrame.src = "about:blank";
+      mvInfo.textContent = "❌ 此歌曲暂无MV";
+      return;
+    }
+
+    youtubeFrame.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=0&controls=1&modestbranding=1`;
+    mvInfo.textContent = "🎬 正在加载MV，请稍候...";
+  }
+
+  function toggleMVPanel() {
+    mvVisible = !mvVisible;
+    mvPanel.classList.toggle('hidden');
+    mvShowBtn.classList.toggle('active');
+    mvShowBtn.textContent = mvVisible ? '🎬 MV' : '🎬 显示';
+  }
+
   // =============== 歌词相关 ===============
   let currentLyricsIndex = 0;
   let parsedLyrics = [];
 
-  // 解析LRC歌词格式
   function parseLyrics(lyricsText) {
     const lines = lyricsText.split('\n');
     const parsed = [];
@@ -1171,7 +1395,6 @@
     return parsed.sort((a, b) => a.time - b.time);
   }
 
-  // 渲染歌词
   function renderLyrics() {
     if (!parsedLyrics || parsedLyrics.length === 0) {
       lyricsContainer.innerHTML = '<div class="no-lyrics">暂无歌词</div>';
@@ -1183,7 +1406,6 @@
     ).join('');
   }
 
-  // 更新当前歌词
   function updateCurrentLyric() {
     if (!parsedLyrics || parsedLyrics.length === 0) return;
 
@@ -1211,7 +1433,6 @@
     }
   }
 
-  // 跳转到歌词对应的时间
   function jumpToLyricTime(time) {
     audio.currentTime = time;
     if (!isPlaying) {
@@ -1222,7 +1443,6 @@
     }
   }
 
-  // 切换歌词面板显示
   function toggleLyricsPanel() {
     lyricsVisible = !lyricsVisible;
     lyricsPanel.classList.toggle('hidden');
@@ -1238,7 +1458,7 @@
     
     if (isShuffleMode) {
       showToast('🔀 已启用随机播放', 'success');
-      playedIndices = [index]; // 初始化已播放列表
+      playedIndices = [index];
     } else {
       showToast('已关闭随机播放', 'success');
       playedIndices = [];
@@ -1247,10 +1467,8 @@
     updatePlaylist();
   }
 
-  // 获取下一首歌曲索引
   function getNextIndex() {
     if (isShuffleMode) {
-      // 随机模式：从未播放过的歌曲中随机选择
       const unplayedIndices = [];
       for (let i = 0; i < songs.length; i++) {
         if (!playedIndices.includes(i)) {
@@ -1258,20 +1476,17 @@
         }
       }
       
-      // 如果所有歌曲都播放过，重置已播放列表
       if (unplayedIndices.length === 0) {
         playedIndices = [];
         unplayedIndices.push(...Array.from({ length: songs.length }, (_, i) => i));
       }
       
-      // 从未播放的歌曲中随机选择
       const randomIdx = Math.floor(Math.random() * unplayedIndices.length);
       const nextIdx = unplayedIndices[randomIdx];
       playedIndices.push(nextIdx);
       
       return nextIdx;
     } else {
-      // 正常模式：顺序下一首
       return (index + 1) % songs.length;
     }
   }
@@ -1283,10 +1498,9 @@
     volumeValue.textContent = `${volume}%`;
   });
 
-  // 初始化音量
   audio.volume = 0.7;
 
-  // 下载文件的通用函数
+  // 下载功能
   function downloadFile(url, filename) {
     const xhr = new XMLHttpRequest();
     xhr.responseType = 'blob';
@@ -1316,7 +1530,6 @@
     }
   }
 
-  // 下载音频
   function downloadAudio() {
     if (index >= 0 && index < songs.length) {
       const song = songs[index];
@@ -1326,7 +1539,6 @@
     }
   }
 
-  // 下载封面
   function downloadCover() {
     if (index >= 0 && index < songs.length) {
       const song = songs[index];
@@ -1344,6 +1556,9 @@
     cover.src = songs[i].cover;
     bgBlur.style.backgroundImage = `url('${songs[i].cover}')`;
     
+    // 加载MV
+    loadYouTubeMV(songs[i].youtubeId);
+    
     if (songs[i].lyrics) {
       parsedLyrics = parseLyrics(songs[i].lyrics);
       currentLyricsIndex = 0;
@@ -1356,7 +1571,7 @@
     updatePlaylist();
   }
 
-  // 切换播放/暂停
+  // 播放控制
   function togglePlay() {
     if (isPlaying) {
       audio.pause();
@@ -1370,7 +1585,6 @@
     isPlaying = !isPlaying;
   }
 
-  // 下一首
   function nextSong() {
     index = getNextIndex();
     loadSong(index);
@@ -1380,10 +1594,8 @@
     bgBlur.classList.add("active");
   }
 
-  // 上一首
   function prevSong() {
     if (isShuffleMode) {
-      // 随机模式下，上一首从已播放列表中移除当前歌曲并回退
       if (playedIndices.length > 1) {
         playedIndices.pop();
         index = playedIndices[playedIndices.length - 1];
@@ -1401,13 +1613,12 @@
     bgBlur.classList.add("active");
   }
 
-  // 切换循环模式
   function toggleLoop() {
     audio.loop = !audio.loop;
     loopBtn.textContent = audio.loop ? "🔄 循环中" : "🔁 循环";
   }
 
-  // 更新进度条
+  // 音频事件
   audio.addEventListener("timeupdate", () => {
     const percent = (audio.currentTime / audio.duration) * 100;
     progress.style.width = percent + "%";
@@ -1415,12 +1626,10 @@
     updateCurrentLyric();
   });
 
-  // 加载元数据
   audio.addEventListener("loadedmetadata", () => {
     durationEl.textContent = formatTime(audio.duration);
   });
 
-  // 点击进度条跳转
   progressContainer.addEventListener("click", e => {
     const width = progressContainer.clientWidth;
     const clickX = e.offsetX;
@@ -1428,12 +1637,11 @@
     audio.currentTime = (clickX / width) * duration;
   });
 
-  // 歌曲结束自动下一首
   audio.addEventListener("ended", () => {
     if (!audio.loop) nextSong();
   });
 
-  // 渲染播放列表
+  // 播放列表
   function updatePlaylist() {
     playlistContainer.innerHTML = songs.map((song, i) => `
       <div class="song-item ${i === index ? 'active' : ''}" onclick="loadSongAndPlay(${i})">
@@ -1444,7 +1652,6 @@
     `).join('');
   }
 
-  // 选择歌曲并播放
   function loadSongAndPlay(i) {
     if (isShuffleMode) {
       playedIndices.push(i);
