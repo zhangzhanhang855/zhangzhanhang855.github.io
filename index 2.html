@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网易云音乐播放器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .player-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 4px;
+            height: 16px;
+            background: #667eea;
+            border-radius: 2px;
+        }
+
+        /* 单曲播放器样式 */
+        .player-frame {
+            width: 100%;
+            border: none;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .song-player {
+            height: 86px;
+        }
+
+        .playlist-player {
+            height: 430px;
+        }
+
+        .album-player {
+            height: 430px;
+        }
+
+        .instructions {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .instructions h3 {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+        }
+
+        .instructions code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #667eea;
+            font-size: 12px;
+        }
+
+        .divider {
+            height: 1px;
+            background: #eee;
+            margin: 30px 0;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            .playlist-player,
+            .album-player {
+                height: 350px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 网易云音乐播放器</h1>
+        <p class="subtitle">外联播放器演示</p>
+
+        <!-- 单曲播放器 -->
+        <div class="player-section">
+            <div class="section-title">单曲播放器</div>
+            <iframe 
+                class="player-frame song-player"
+                src="https://music.163.com/outchain/player?type=2&id=1919066896&auto=1&height=66"
+                frameborder="0"
+                allow="autoplay">
+            </iframe>
+            <p style="color: #999; font-size: 12px;">示例曲目ID: 1919066896</p>
+        </div>
+
+        <!-- 歌单播放器 -->
+        <div class="player-section">
+            <div class="section-title">歌单播放器</div>
+            <iframe 
+                class="player-frame playlist-player"
+                src="https://music.163.com/outchain/player?type=3&id=2829883282&auto=1&height=430"
+                frameborder="0"
+                allow="autoplay">
+            </iframe>
+            <p style="color: #999; font-size: 12px;">示例歌单ID: 2829883282</p>
+        </div>
+
+        <!-- 专辑播放器 -->
+        <div class="player-section">
+            <div class="section-title">专辑播放器</div>
+            <iframe 
+                class="player-frame album-player"
+                src="https://music.163.com/outchain/player?type=1&id=2602052854&auto=1&height=430"
+                frameborder="0"
+                allow="autoplay">
+            </iframe>
+            <p style="color: #999; font-size: 12px;">示例专辑ID: 2602052854</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 使用说明 -->
+        <div class="instructions">
+            <h3>📖 如何使用</h3>
+            <ol>
+                <li>访问网易云音乐官网，找到你要分享的歌曲、歌单或专辑</li>
+                <li>点击分享按钮，选择"生成外链播放器"</li>
+                <li>复制生成的代码片段</li>
+                <li>或者按照以下方式手动生成：
+                    <ul style="margin: 8px 0 0 20px; list-style-type: circle;">
+                        <li>单曲：<code>?type=2&id=音乐ID</code></li>
+                        <li>歌单：<code>?type=3&id=歌单ID</code></li>
+                        <li>专辑：<code>?type=1&id=专辑ID</code></li>
+                        <li>播客：<code>?type=4&id=播客ID</code></li>
+                    </ul>
+                </li>
+                <li>修改 <code>id</code> 参数为你想要的音乐ID即可</li>
+            </ol>
+
+            <h3 style="margin-top: 15px;">🔗 URL 参数说明</h3>
+            <ul style="margin-left: 20px; margin-top: 8px;">
+                <li><code>type</code>：类型（1=专辑，2=单曲，3=歌单，4=播客）</li>
+                <li><code>id</code>：音乐/歌单/专辑的ID号</li>
+                <li><code>auto</code>：1=自动播放，0=手动播放</li>
+                <li><code>height</code>：播放器高度（单位：px）</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
