@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>ZZH Music Player - 音乐播放器</title>
   <style>
-    /* 黄金分割常数 */
     :root {
       --golden-ratio: 1.618;
       --base-spacing: 16px;
       --golden-spacing: calc(var(--base-spacing) * var(--golden-ratio));
+      --primary-color: #00e5ff;
+      --primary-dark: #00d4ff;
     }
 
     * {
@@ -50,231 +51,48 @@
       opacity: 1;
     }
 
-    /* 主容器 - 自适应三列布局 */
+    /* 主容器 - 播放器居中布局 */
     .container {
       display: grid;
-      grid-template-columns: 1fr calc(1fr * var(--golden-ratio)) calc(1.2fr);
-      gap: calc(var(--base-spacing) + 8px);
-      max-width: 1800px;
+      grid-template-columns: 1fr 380px 1fr;
+      grid-template-rows: auto auto auto;
+      gap: var(--base-spacing);
+      max-width: 1600px;
       width: 100%;
       position: relative;
       z-index: 1;
       padding: var(--base-spacing) 0;
+      align-items: start;
     }
 
-    /* 左列：播放器 */
+    /* 左列：播放列表 */
     .left-column {
       display: flex;
       flex-direction: column;
       gap: calc(var(--base-spacing) - 2px);
-      min-width: 280px;
+      grid-column: 1;
+      grid-row: 1 / 4;
+      min-width: 0;
     }
 
-    /* 中列：列表和歌词 */
+    /* 中列：播放器（居中） */
     .middle-column {
       display: flex;
       flex-direction: column;
-      gap: calc(var(--base-spacing) - 2px);
+      gap: var(--base-spacing);
+      grid-column: 2;
+      grid-row: 2;
+      justify-self: center;
     }
 
-    /* 右列：MV播放器和音频可视化 */
+    /* 右列：MV和可视化 */
     .right-column {
       display: flex;
       flex-direction: column;
       gap: calc(var(--base-spacing) - 2px);
-    }
-
-    /* 音频可视化面板 */
-    .visualizer-panel {
-      width: 100%;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      padding: calc(var(--base-spacing) * 1.1);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      animation: slideIn 0.6s ease;
-      display: flex;
-      flex-direction: column;
-      gap: var(--base-spacing);
-      overflow: hidden;
-    }
-
-    .visualizer-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #00e5ff;
-      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 2.618);
-    }
-
-    .visualizer-title::before {
-      content: "📊";
-      font-size: 18px;
-    }
-
-    .visualizer-controls {
-      display: flex;
-      gap: calc(var(--base-spacing) / 2);
-      flex-wrap: wrap;
-    }
-
-    .visualizer-controls button {
-      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
-      border: none;
-      color: #000;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 11px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
-      flex: 1;
-      min-width: 70px;
-    }
-
-    .visualizer-controls button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
-    }
-
-    .visualizer-controls button.active {
-      background: linear-gradient(135deg, #ff1493 0%, #c71585 100%);
-      box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
-    }
-
-    /* Canvas 容器 */
-    .canvas-container {
-      width: 100%;
-      height: 200px;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid rgba(0, 229, 255, 0.2);
-    }
-
-    .canvas-container canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* 音频统计信息 */
-    .audio-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: calc(var(--base-spacing) / 2);
-      padding: var(--base-spacing);
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      border: 1px solid rgba(0, 229, 255, 0.1);
-    }
-
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      color: #888;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .stat-value {
-      font-size: 14px;
-      color: #00e5ff;
-      font-weight: 700;
-      font-family: 'Courier New', monospace;
-    }
-
-    /* MV容器 */
-    .mv-panel {
-      width: 100%;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      padding: calc(var(--base-spacing) * 1.1);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      animation: slideIn 0.6s ease;
-      display: flex;
-      flex-direction: column;
-      gap: var(--base-spacing);
-      overflow: hidden;
-    }
-
-    .mv-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #00e5ff;
-      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 2.618);
-    }
-
-    .mv-title::before {
-      content: "🎬";
-      font-size: 18px;
-    }
-
-    .youtube-container {
-      position: relative;
-      width: 100%;
-      padding-bottom: 56.25%;
-      height: 0;
-      overflow: hidden;
-      border-radius: 12px;
-      background: #000;
-      border: 1px solid rgba(0, 229, 255, 0.2);
-    }
-
-    .youtube-container iframe {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-      border-radius: 12px;
-    }
-
-    .mv-toggle-btn {
-      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
-      border: none;
-      color: #000;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 12px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
-      width: 100%;
-    }
-
-    .mv-toggle-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
-    }
-
-    .mv-panel.hidden {
-      display: none;
-    }
-
-    .mv-info {
-      font-size: 12px;
-      color: #888;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      border-left: 3px solid #00e5ff;
+      grid-column: 3;
+      grid-row: 1 / 4;
+      min-width: 0;
     }
 
     /* 播放器主体 */
@@ -332,7 +150,7 @@
       font-size: 16px;
       font-weight: 600;
       margin-bottom: calc(var(--base-spacing) / 2.618);
-      color: #00e5ff;
+      color: var(--primary-color);
       text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -366,7 +184,7 @@
     .progress {
       height: 100%;
       width: 0%;
-      background: linear-gradient(90deg, #00e5ff 0%, #00d4ff 100%);
+      background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       border-radius: 3px;
       box-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
       transition: width 0.1s linear;
@@ -382,7 +200,7 @@
     }
 
     .controls button {
-      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       border: none;
       color: #000;
       padding: 8px 12px;
@@ -419,7 +237,7 @@
     }
 
     .secondary-controls button {
-      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       border: none;
       color: #000;
       padding: 6px 10px;
@@ -513,7 +331,7 @@
       appearance: none;
       width: 12px;
       height: 12px;
-      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       border-radius: 50%;
       cursor: pointer;
       box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
@@ -528,7 +346,7 @@
     .volume-slider::-moz-range-thumb {
       width: 12px;
       height: 12px;
-      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       border-radius: 50%;
       cursor: pointer;
       border: none;
@@ -545,7 +363,7 @@
       min-width: 32px;
       text-align: right;
       font-size: 11px;
-      color: #00e5ff;
+      color: var(--primary-color);
       font-weight: 600;
     }
 
@@ -618,19 +436,19 @@
     }
 
     .playlist::-webkit-scrollbar-thumb {
-      background: #00e5ff;
+      background: var(--primary-color);
       border-radius: 8px;
     }
 
     .playlist::-webkit-scrollbar-thumb:hover {
-      background: #00d4ff;
+      background: var(--primary-dark);
     }
 
     .playlist-title {
       font-size: 14px;
       font-weight: 700;
       margin-bottom: var(--base-spacing);
-      color: #00e5ff;
+      color: var(--primary-color);
       text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
       display: flex;
       align-items: center;
@@ -663,7 +481,7 @@
 
     .song-item.active {
       background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 212, 255, 0.2) 100%);
-      border-color: #00e5ff;
+      border-color: var(--primary-color);
       box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
     }
 
@@ -676,7 +494,7 @@
     }
 
     .song-item.active .song-number {
-      color: #00e5ff;
+      color: var(--primary-color);
     }
 
     .song-name {
@@ -690,13 +508,13 @@
     }
 
     .song-item.active .song-name {
-      color: #00e5ff;
+      color: var(--primary-color);
       font-weight: 600;
     }
 
     .play-icon {
       font-size: 11px;
-      color: #00e5ff;
+      color: var(--primary-color);
       opacity: 0;
       transition: opacity 0.3s;
     }
@@ -736,7 +554,7 @@
     .lyrics-title {
       font-size: 14px;
       font-weight: 700;
-      color: #00e5ff;
+      color: var(--primary-color);
       text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
       display: flex;
       align-items: center;
@@ -751,7 +569,7 @@
     .lyrics-toggle {
       background: rgba(0, 229, 255, 0.1);
       border: 1px solid rgba(0, 229, 255, 0.3);
-      color: #00e5ff;
+      color: var(--primary-color);
       padding: 3px 10px;
       border-radius: 5px;
       cursor: pointer;
@@ -762,13 +580,13 @@
 
     .lyrics-toggle:hover {
       background: rgba(0, 229, 255, 0.2);
-      border-color: #00e5ff;
+      border-color: var(--primary-color);
     }
 
     .lyrics-toggle.active {
-      background: linear-gradient(135deg, #00e5ff 0%, #00d4ff 100%);
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
       color: #000;
-      border-color: #00e5ff;
+      border-color: var(--primary-color);
     }
 
     /* 歌词容器 */
@@ -795,12 +613,12 @@
     }
 
     .lyrics-container::-webkit-scrollbar-thumb {
-      background: #00e5ff;
+      background: var(--primary-color);
       border-radius: 8px;
     }
 
     .lyrics-container::-webkit-scrollbar-thumb:hover {
-      background: #00d4ff;
+      background: var(--primary-dark);
     }
 
     /* 歌词行 */
@@ -818,15 +636,15 @@
 
     .lyric-line:hover {
       background: rgba(0, 229, 255, 0.1);
-      border-left-color: #00e5ff;
+      border-left-color: var(--primary-color);
       color: #ccc;
     }
 
     /* 当前歌词行 */
     .lyric-line.active {
-      color: #00e5ff;
+      color: var(--primary-color);
       background: rgba(0, 229, 255, 0.15);
-      border-left-color: #00e5ff;
+      border-left-color: var(--primary-color);
       font-weight: 600;
       font-size: 14px;
       transform: scale(1.05);
@@ -842,6 +660,199 @@
       color: #666;
       font-size: 13px;
       text-align: center;
+    }
+
+    /* 音频可视化面板 */
+    .visualizer-panel {
+      width: 100%;
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      padding: calc(var(--base-spacing) * 1.1);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
+      border: 1px solid rgba(0, 229, 255, 0.1);
+      animation: slideIn 0.6s ease;
+      display: flex;
+      flex-direction: column;
+      gap: var(--base-spacing);
+      overflow: hidden;
+    }
+
+    .visualizer-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
+      display: flex;
+      align-items: center;
+      gap: calc(var(--base-spacing) / 2.618);
+    }
+
+    .visualizer-title::before {
+      content: "📊";
+      font-size: 18px;
+    }
+
+    .visualizer-controls {
+      display: flex;
+      gap: calc(var(--base-spacing) / 2);
+      flex-wrap: wrap;
+    }
+
+    .visualizer-controls button {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      border: none;
+      color: #000;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 11px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
+      flex: 1;
+      min-width: 70px;
+    }
+
+    .visualizer-controls button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
+    }
+
+    .visualizer-controls button.active {
+      background: linear-gradient(135deg, #ff1493 0%, #c71585 100%);
+      box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
+    }
+
+    /* Canvas 容器 */
+    .canvas-container {
+      width: 100%;
+      height: 200px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+    }
+
+    .canvas-container canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* 音频统计信息 */
+    .audio-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: calc(var(--base-spacing) / 2);
+      padding: var(--base-spacing);
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(0, 229, 255, 0.1);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: #888;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 14px;
+      color: var(--primary-color);
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* MV容器 */
+    .mv-panel {
+      width: 100%;
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(10px);
+      padding: calc(var(--base-spacing) * 1.1);
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
+      border: 1px solid rgba(0, 229, 255, 0.1);
+      animation: slideIn 0.6s ease;
+      display: flex;
+      flex-direction: column;
+      gap: var(--base-spacing);
+      overflow: hidden;
+    }
+
+    .mv-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary-color);
+      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
+      display: flex;
+      align-items: center;
+      gap: calc(var(--base-spacing) / 2.618);
+    }
+
+    .mv-title::before {
+      content: "🎬";
+      font-size: 18px;
+    }
+
+    .youtube-container {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #000;
+      border: 1px solid rgba(0, 229, 255, 0.2);
+    }
+
+    .youtube-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 12px;
+    }
+
+    .mv-toggle-btn {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+      border: none;
+      color: #000;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 12px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
+      width: 100%;
+    }
+
+    .mv-toggle-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
+    }
+
+    .mv-panel.hidden {
+      display: none;
+    }
+
+    .mv-info {
+      font-size: 12px;
+      color: #888;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border-left: 3px solid var(--primary-color);
     }
 
     /* 加载状态提示 */
@@ -894,79 +905,65 @@
       animation: slideOutDown 0.3s ease forwards;
     }
 
-    /* iPad 横屏大屏幕 (1400px 以上) */
+    /* 响应式设计 - 大屏幕 */
     @media (min-width: 1400px) {
       .container {
-        grid-template-columns: 0.9fr 1fr 1.2fr;
-        gap: var(--golden-spacing);
+        grid-template-columns: 1fr 400px 1fr;
       }
 
       .left-column {
-        min-width: auto;
-      }
-
-      .middle-column {
-        display: flex;
+        max-height: 800px;
       }
 
       .right-column {
-        display: flex;
+        max-height: 800px;
+      }
+
+      .playlist {
+        max-height: 500px;
+      }
+
+      .lyrics-panel {
+        max-height: 500px;
+      }
+
+      .lyrics-container {
+        height: 380px;
       }
 
       .visualizer-panel {
-        order: -1;
+        max-height: 400px;
+      }
+
+      .canvas-container {
+        height: 180px;
       }
 
       .mv-panel {
+        max-height: 450px;
+      }
+    }
+
+    /* 响应式设计 - 中等屏幕 */
+    @media (min-width: 1024px) and (max-width: 1399px) {
+      .container {
+        grid-template-columns: 0.9fr 350px 0.9fr;
+      }
+
+      .left-column {
+        max-height: 700px;
+      }
+
+      .right-column {
         max-height: 700px;
       }
 
       .playlist {
-        max-height: 520px;
-      }
-
-      .lyrics-panel {
-        max-height: 520px;
-      }
-
-      .lyrics-container {
-        height: 400px;
-      }
-    }
-
-    /* iPad 横屏中等屏幕 (1024px - 1399px) */
-    @media (min-width: 1024px) and (max-width: 1399px) {
-      .container {
-        grid-template-columns: 1fr 0.8fr 1fr;
-        gap: 12px;
-      }
-
-      .left-column {
-        min-width: 240px;
-      }
-
-      .middle-column {
-        display: flex;
-        gap: 12px;
-        grid-column: 2;
-      }
-
-      .right-column {
-        display: flex;
-        flex-direction: column;
-        grid-column: 3;
-      }
-
-      .playlist {
         max-height: 450px;
-        flex: 1;
       }
 
       .lyrics-panel {
         max-height: 450px;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
       }
 
       .lyrics-container {
@@ -974,21 +971,15 @@
       }
 
       .visualizer-panel {
-        order: -1;
-        max-height: 300px;
+        max-height: 350px;
       }
 
       .canvas-container {
-        height: 140px;
-      }
-
-      .audio-stats {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        height: 150px;
       }
 
       .mv-panel {
-        max-height: 600px;
+        max-height: 400px;
       }
 
       .player {
@@ -1015,35 +1006,39 @@
       }
     }
 
-    /* 平板竖屏 (768px - 1023px) */
+    /* 平板竖屏 */
     @media (min-width: 768px) and (max-width: 1023px) {
       .container {
         grid-template-columns: 1fr;
-        gap: var(--golden-spacing);
+        grid-template-rows: auto auto auto auto;
       }
 
       .left-column {
-        max-width: 100%;
+        grid-column: 1;
+        grid-row: 3;
+        max-height: 400px;
       }
 
       .middle-column {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--base-spacing);
+        grid-column: 1;
+        grid-row: 2;
       }
 
       .right-column {
-        display: flex;
-        flex-direction: column;
-        gap: var(--base-spacing);
+        grid-column: 1;
+        grid-row: 4;
       }
 
       .visualizer-panel {
-        order: -1;
+        order: 1;
       }
 
       .mv-panel {
         display: none;
+      }
+
+      .player {
+        padding: 24px 16px;
       }
 
       .playlist {
@@ -1061,40 +1056,61 @@
       .canvas-container {
         height: 160px;
       }
-
-      .youtube-container {
-        padding-bottom: 56.25%;
-      }
     }
 
     /* 手机竖屏 */
     @media (max-width: 767px) {
       .container {
         grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
         gap: var(--base-spacing);
       }
 
       .left-column {
-        max-width: 100%;
+        grid-column: 1;
+        grid-row: 3;
+        max-height: 400px;
       }
 
       .middle-column {
-        display: flex;
-        flex-direction: column;
+        grid-column: 1;
+        grid-row: 2;
       }
 
       .right-column {
-        display: flex;
-        flex-direction: column;
-        gap: var(--base-spacing);
+        grid-column: 1;
+        grid-row: 4;
       }
 
       .visualizer-panel {
-        order: -1;
+        order: 1;
       }
 
       .mv-panel {
         display: none;
+      }
+
+      .player {
+        padding: 20px 12px;
+      }
+
+      .cover {
+        margin-bottom: 12px;
+      }
+
+      .title {
+        font-size: 14px;
+      }
+
+      .controls button {
+        padding: 6px 8px;
+        font-size: 11px;
+      }
+
+      .secondary-controls button {
+        font-size: 10px;
+        padding: 4px 6px;
+        min-width: 40px;
       }
 
       .playlist {
@@ -1113,14 +1129,6 @@
         height: 140px;
       }
 
-      .youtube-container {
-        padding-bottom: 56.25%;
-      }
-
-      .audio-stats {
-        grid-template-columns: 1fr 1fr;
-      }
-
       .visualizer-controls {
         flex-wrap: wrap;
       }
@@ -1128,6 +1136,10 @@
       .visualizer-controls button {
         flex: 1;
         min-width: 60px;
+      }
+
+      .audio-stats {
+        grid-template-columns: 1fr 1fr;
       }
     }
 
@@ -1144,8 +1156,16 @@
 
 <!-- 主容器 -->
 <div class="container">
-  <!-- 左列：播放器 -->
+  <!-- 左列：播放列表 -->
   <div class="left-column">
+    <div class="playlist">
+      <div class="playlist-title">播放列表</div>
+      <div id="playlistContainer"></div>
+    </div>
+  </div>
+
+  <!-- 中列：播放器（居中） -->
+  <div class="middle-column">
     <div class="player">
       <img src="" id="cover" class="cover" alt="歌曲封面" />
       
@@ -1195,27 +1215,7 @@
     </div>
   </div>
 
-  <!-- 中列：歌曲列表和歌词 -->
-  <div class="middle-column">
-    <!-- 歌曲列表 -->
-    <div class="playlist">
-      <div class="playlist-title">播放列表</div>
-      <div id="playlistContainer"></div>
-    </div>
-
-    <!-- 歌词面板 -->
-    <div class="lyrics-panel" id="lyricsPanel">
-      <div class="lyrics-header">
-        <div class="lyrics-title">歌词</div>
-        <button class="lyrics-toggle active" id="lyricsToggle" onclick="toggleLyricsPanel()">隐藏</button>
-      </div>
-      <div class="lyrics-container" id="lyricsContainer">
-        <div class="no-lyrics">暂无歌词</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 右列：可视化和MV播放器 -->
+  <!-- 右列：可视化和MV -->
   <div class="right-column">
     <!-- 音频可视化面板 -->
     <div class="visualizer-panel" id="visualizerPanel">
@@ -1266,6 +1266,17 @@
         💡 提示：点击播放列表中的歌曲，将自动加载对应的MV
       </div>
       <button class="mv-toggle-btn" onclick="toggleMVPanel()">隐藏MV</button>
+    </div>
+
+    <!-- 歌词面板 -->
+    <div class="lyrics-panel" id="lyricsPanel">
+      <div class="lyrics-header">
+        <div class="lyrics-title">歌词</div>
+        <button class="lyrics-toggle active" id="lyricsToggle" onclick="toggleLyricsPanel()">隐藏</button>
+      </div>
+      <div class="lyrics-container" id="lyricsContainer">
+        <div class="no-lyrics">暂无歌词</div>
+      </div>
     </div>
   </div>
 </div>
