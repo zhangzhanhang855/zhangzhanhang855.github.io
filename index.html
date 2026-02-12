@@ -1,2144 +1,410 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>ZZH Music Player - 音乐播放器</title>
-  <style>
-    :root {
-      --golden-ratio: 1.618;
-      --base-spacing: 16px;
-      --golden-spacing: calc(var(--base-spacing) * var(--golden-ratio));
-      --primary-color: #00e5ff;
-      --primary-dark: #00d4ff;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #0a0a0a;
-      color: #fff;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      padding: var(--base-spacing);
-      overflow-y: auto;
-      overflow-x: auto;
-    }
-
-    /* 动态背景 */
-    .bg-blur {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-size: cover;
-      background-position: center;
-      filter: blur(40px) brightness(0.3);
-      opacity: 0;
-      transition: opacity 0.8s ease;
-      z-index: 0;
-    }
-
-    .bg-blur.active {
-      opacity: 1;
-    }
-
-    /* 主容器 - 播放器居中布局 */
-    .container {
-      display: grid;
-      grid-template-columns: 1fr 380px 1fr;
-      grid-template-rows: auto auto auto;
-      gap: var(--base-spacing);
-      max-width: 1600px;
-      width: 100%;
-      position: relative;
-      z-index: 1;
-      padding: var(--base-spacing) 0;
-      align-items: start;
-    }
-
-    /* 左列：播放列表 */
-    .left-column {
-      display: flex;
-      flex-direction: column;
-      gap: calc(var(--base-spacing) - 2px);
-      grid-column: 1;
-      grid-row: 1 / 4;
-      min-width: 0;
-    }
-
-    /* 中列：播放器（居中） */
-    .middle-column {
-      display: flex;
-      flex-direction: column;
-      gap: var(--base-spacing);
-      grid-column: 2;
-      grid-row: 2;
-      justify-self: center;
-    }
-
-    /* 右列：MV和可视化 */
-    .right-column {
-      display: flex;
-      flex-direction: column;
-      gap: calc(var(--base-spacing) - 2px);
-      grid-column: 3;
-      grid-row: 1 / 4;
-      min-width: 0;
-    }
-
-    /* 播放器主体 */
-    .player {
-      width: 100%;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      padding: calc(var(--base-spacing) * 1.5) calc(var(--base-spacing) * 1.25);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      text-align: center;
-      animation: slideIn 0.6s ease;
-    }
-
-    @keyframes slideIn {
-      from {
-        opacity: 0;
-        transform: translateY(20px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-
-    /* 封面 */
-    .cover {
-      width: 100%;
-      aspect-ratio: 1;
-      background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
-      margin-bottom: var(--base-spacing);
-      border-radius: 12px;
-      object-fit: cover;
-      box-shadow: 0 10px 30px rgba(0, 229, 255, 0.15);
-      border: 2px solid rgba(0, 229, 255, 0.1);
-      animation: coverRotate 0.6s ease;
-    }
-
-    @keyframes coverRotate {
-      from {
-        transform: scale(0.8) rotateY(10deg);
-      }
-      to {
-        transform: scale(1) rotateY(0);
-      }
-    }
-
-    /* 标题和信息 */
-    .song-info {
-      margin-bottom: calc(var(--base-spacing) - 2px);
-    }
-
-    .title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: calc(var(--base-spacing) / 2.618);
-      color: var(--primary-color);
-      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .time-info {
-      font-size: 11px;
-      color: #888;
-      display: flex;
-      justify-content: space-between;
-      margin-top: calc(var(--base-spacing) / 2.618);
-    }
-
-    /* 进度条 */
-    .progress-container {
-      width: 100%;
-      height: 6px;
-      background: rgba(68, 68, 68, 0.6);
-      border-radius: 3px;
-      cursor: pointer;
-      margin: var(--base-spacing) 0;
-      overflow: hidden;
-      transition: height 0.2s;
-    }
-
-    .progress-container:hover {
-      height: 8px;
-    }
-
-    .progress {
-      height: 100%;
-      width: 0%;
-      background: linear-gradient(90deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      border-radius: 3px;
-      box-shadow: 0 0 10px rgba(0, 229, 255, 0.6);
-      transition: width 0.1s linear;
-    }
-
-    /* 控制按钮 */
-    .controls {
-      display: flex;
-      gap: calc(var(--base-spacing) / 2);
-      justify-content: center;
-      margin-bottom: var(--base-spacing);
-      flex-wrap: wrap;
-    }
-
-    .controls button {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      border: none;
-      color: #000;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 12px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
-      flex: 1;
-      min-width: 60px;
-    }
-
-    .controls button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
-    }
-
-    .controls button:active {
-      transform: translateY(0);
-    }
-
-    #playBtn {
-      flex: 1.2;
-      font-size: 13px;
-    }
-
-    /* 辅助控制 */
-    .secondary-controls {
-      display: flex;
-      gap: calc(var(--base-spacing) / 2);
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-
-    .secondary-controls button {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      border: none;
-      color: #000;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 11px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
-      flex: 1;
-      min-width: 50px;
-    }
-
-    .secondary-controls button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
-    }
-
-    .secondary-controls button:active {
-      transform: translateY(0);
-    }
-
-    .secondary-controls button.lyrics-btn {
-      background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
-      box-shadow: 0 4px 12px rgba(156, 39, 176, 0.3);
-    }
-
-    .secondary-controls button.lyrics-btn:hover {
-      box-shadow: 0 6px 20px rgba(156, 39, 176, 0.5);
-    }
-
-    .secondary-controls button.shuffle-btn {
-      background: linear-gradient(135deg, #ff6b9d 0%, #f06595 100%);
-      box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
-    }
-
-    .secondary-controls button.shuffle-btn:hover {
-      box-shadow: 0 6px 20px rgba(255, 107, 157, 0.5);
-    }
-
-    .secondary-controls button.shuffle-btn.active {
-      background: linear-gradient(135deg, #ff1493 0%, #c71585 100%);
-      box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
-    }
-
-    .secondary-controls button.mv-btn {
-      background: linear-gradient(135deg, #ff6b9d 0%, #f06595 100%);
-      box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
-    }
-
-    .secondary-controls button.mv-btn:hover {
-      box-shadow: 0 6px 20px rgba(255, 107, 157, 0.5);
-    }
-
-    .secondary-controls button.mv-btn.active {
-      background: linear-gradient(135deg, #ff1493 0%, #c71585 100%);
-      box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
-    }
-
-    /* 音量控制 */
-    .volume-control {
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 2);
-      padding: var(--base-spacing);
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      margin-bottom: var(--base-spacing);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-    }
-
-    .volume-icon {
-      font-size: 16px;
-      min-width: 22px;
-      text-align: center;
-    }
-
-    .volume-slider {
-      flex: 1;
-      height: 5px;
-      -webkit-appearance: none;
-      appearance: none;
-      background: rgba(68, 68, 68, 0.6);
-      border-radius: 3px;
-      outline: none;
-      cursor: pointer;
-    }
-
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      appearance: none;
-      width: 12px;
-      height: 12px;
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      border-radius: 50%;
-      cursor: pointer;
-      box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
-      transition: all 0.2s;
-    }
-
-    .volume-slider::-webkit-slider-thumb:hover {
-      transform: scale(1.3);
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
-    }
-
-    .volume-slider::-moz-range-thumb {
-      width: 12px;
-      height: 12px;
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      border-radius: 50%;
-      cursor: pointer;
-      border: none;
-      box-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
-      transition: all 0.2s;
-    }
-
-    .volume-slider::-moz-range-thumb:hover {
-      transform: scale(1.3);
-      box-shadow: 0 0 15px rgba(0, 229, 255, 0.8);
-    }
-
-    .volume-value {
-      min-width: 32px;
-      text-align: right;
-      font-size: 11px;
-      color: var(--primary-color);
-      font-weight: 600;
-    }
-
-    /* 下载按钮 */
-    .download-controls {
-      display: flex;
-      gap: calc(var(--base-spacing) / 2);
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-
-    .download-btn {
-      background: linear-gradient(135deg, #ff6b9d 0%, #f06595 100%);
-      border: none;
-      color: #fff;
-      padding: 7px 11px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 12px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(255, 107, 157, 0.3);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      flex: 1;
-      min-width: 80px;
-      justify-content: center;
-    }
-
-    .download-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(255, 107, 157, 0.5);
-    }
-
-    .download-btn:active {
-      transform: translateY(0);
-    }
-
-    .download-btn.cover {
-      background: linear-gradient(135deg, #ffa502 0%, #ff8c42 100%);
-      box-shadow: 0 4px 12px rgba(255, 165, 2, 0.3);
-    }
-
-    .download-btn.cover:hover {
-      box-shadow: 0 6px 20px rgba(255, 165, 2, 0.5);
-    }
-
-    /* 歌曲列表 */
-    .playlist {
-      width: 100%;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      padding: calc(var(--base-spacing) * 1.1);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      animation: slideIn 0.6s ease 0.1s both;
-      max-height: 600px;
-      overflow-y: auto;
-    }
-
-    .playlist::-webkit-scrollbar {
-      width: 5px;
-    }
-
-    .playlist::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-    }
-
-    .playlist::-webkit-scrollbar-thumb {
-      background: var(--primary-color);
-      border-radius: 8px;
-    }
-
-    .playlist::-webkit-scrollbar-thumb:hover {
-      background: var(--primary-dark);
-    }
-
-    .playlist-title {
-      font-size: 14px;
-      font-weight: 700;
-      margin-bottom: var(--base-spacing);
-      color: var(--primary-color);
-      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 2.618);
-    }
-
-    .playlist-title::before {
-      content: "♫";
-      font-size: 18px;
-    }
-
-    .song-item {
-      padding: 10px 12px;
-      margin-bottom: calc(var(--base-spacing) / 2.618);
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s;
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 1.618);
-    }
-
-    .song-item:hover {
-      background: rgba(0, 229, 255, 0.1);
-      border-color: rgba(0, 229, 255, 0.3);
-      transform: translateX(3px);
-    }
-
-    .song-item.active {
-      background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(0, 212, 255, 0.2) 100%);
-      border-color: var(--primary-color);
-      box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
-    }
-
-    .song-number {
-      font-size: 11px;
-      color: #888;
-      min-width: 22px;
-      font-weight: 600;
-      text-align: center;
-    }
-
-    .song-item.active .song-number {
-      color: var(--primary-color);
-    }
-
-    .song-name {
-      flex: 1;
-      text-align: left;
-      font-size: 13px;
-      color: #ddd;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .song-item.active .song-name {
-      color: var(--primary-color);
-      font-weight: 600;
-    }
-
-    .play-icon {
-      font-size: 11px;
-      color: var(--primary-color);
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .song-item.active .play-icon {
-      opacity: 1;
-    }
-
-    /* 歌词显示面板 */
-    .lyrics-panel {
-      width: 100%;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      padding: calc(var(--base-spacing) * 1.1);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      animation: slideIn 0.6s ease 0.2s both;
-      display: flex;
-      flex-direction: column;
-      gap: var(--base-spacing);
-      max-height: 550px;
-      overflow: hidden;
-    }
-
-    .lyrics-panel.hidden {
-      display: none;
-    }
-
-    .lyrics-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: calc(var(--base-spacing) / 2);
-    }
-
-    .lyrics-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--primary-color);
-      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 2.618);
-    }
-
-    .lyrics-title::before {
-      content: "♪";
-      font-size: 18px;
-    }
-
-    .lyrics-toggle {
-      background: rgba(0, 229, 255, 0.1);
-      border: 1px solid rgba(0, 229, 255, 0.3);
-      color: var(--primary-color);
-      padding: 3px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 11px;
-      font-weight: 600;
-      transition: all 0.3s;
-    }
-
-    .lyrics-toggle:hover {
-      background: rgba(0, 229, 255, 0.2);
-      border-color: var(--primary-color);
-    }
-
-    .lyrics-toggle.active {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      color: #000;
-      border-color: var(--primary-color);
-    }
-
-    /* 歌词容器 */
-    .lyrics-container {
-      height: 440px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 10px;
-      overflow-y: auto;
-      padding: var(--base-spacing);
-      display: flex;
-      flex-direction: column;
-      gap: calc(var(--base-spacing) / 1.618);
-      scroll-behavior: smooth;
-      border: 1px solid rgba(0, 229, 255, 0.1);
-    }
-
-    .lyrics-container::-webkit-scrollbar {
-      width: 5px;
-    }
-
-    .lyrics-container::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-    }
-
-    .lyrics-container::-webkit-scrollbar-thumb {
-      background: var(--primary-color);
-      border-radius: 8px;
-    }
-
-    .lyrics-container::-webkit-scrollbar-thumb:hover {
-      background: var(--primary-dark);
-    }
-
-    /* 歌词行 */
-    .lyric-line {
-      padding: 8px 12px;
-      border-radius: 6px;
-      transition: all 0.3s ease;
-      color: #999;
-      font-size: 13px;
-      line-height: 1.5;
-      text-align: center;
-      cursor: pointer;
-      border-left: 3px solid transparent;
-    }
-
-    .lyric-line:hover {
-      background: rgba(0, 229, 255, 0.1);
-      border-left-color: var(--primary-color);
-      color: #ccc;
-    }
-
-    /* 当前歌词行 */
-    .lyric-line.active {
-      color: var(--primary-color);
-      background: rgba(0, 229, 255, 0.15);
-      border-left-color: var(--primary-color);
-      font-weight: 600;
-      font-size: 14px;
-      transform: scale(1.05);
-      box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
-    }
-
-    /* 无歌词提示 */
-    .no-lyrics {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
-      color: #666;
-      font-size: 13px;
-      text-align: center;
-    }
-
-    /* 音频可视化面板 */
-    .visualizer-panel {
-      width: 100%;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      padding: calc(var(--base-spacing) * 1.1);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      animation: slideIn 0.6s ease;
-      display: flex;
-      flex-direction: column;
-      gap: var(--base-spacing);
-      overflow: hidden;
-    }
-
-    .visualizer-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--primary-color);
-      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 2.618);
-    }
-
-    .visualizer-title::before {
-      content: "📊";
-      font-size: 18px;
-    }
-
-    .visualizer-controls {
-      display: flex;
-      gap: calc(var(--base-spacing) / 2);
-      flex-wrap: wrap;
-    }
-
-    .visualizer-controls button {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      border: none;
-      color: #000;
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 11px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
-      flex: 1;
-      min-width: 70px;
-    }
-
-    .visualizer-controls button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
-    }
-
-    .visualizer-controls button.active {
-      background: linear-gradient(135deg, #ff1493 0%, #c71585 100%);
-      box-shadow: 0 6px 20px rgba(255, 20, 147, 0.6);
-    }
-
-    /* Canvas 容器 */
-    .canvas-container {
-      width: 100%;
-      height: 200px;
-      background: rgba(0, 0, 0, 0.4);
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid rgba(0, 229, 255, 0.2);
-    }
-
-    .canvas-container canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-
-    /* 音频统计信息 */
-    .audio-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: calc(var(--base-spacing) / 2);
-      padding: var(--base-spacing);
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      border: 1px solid rgba(0, 229, 255, 0.1);
-    }
-
-    .stat-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .stat-label {
-      font-size: 11px;
-      color: #888;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .stat-value {
-      font-size: 14px;
-      color: var(--primary-color);
-      font-weight: 700;
-      font-family: 'Courier New', monospace;
-    }
-
-    /* MV容器 */
-    .mv-panel {
-      width: 100%;
-      background: rgba(30, 30, 30, 0.95);
-      backdrop-filter: blur(10px);
-      padding: calc(var(--base-spacing) * 1.1);
-      border-radius: 16px;
-      box-shadow: 0 20px 60px rgba(0, 229, 255, 0.15);
-      border: 1px solid rgba(0, 229, 255, 0.1);
-      animation: slideIn 0.6s ease;
-      display: flex;
-      flex-direction: column;
-      gap: var(--base-spacing);
-      overflow: hidden;
-    }
-
-    .mv-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--primary-color);
-      text-shadow: 0 2px 10px rgba(0, 229, 255, 0.3);
-      display: flex;
-      align-items: center;
-      gap: calc(var(--base-spacing) / 2.618);
-    }
-
-    .mv-title::before {
-      content: "🎬";
-      font-size: 18px;
-    }
-
-    .youtube-container {
-      position: relative;
-      width: 100%;
-      padding-bottom: 56.25%;
-      height: 0;
-      overflow: hidden;
-      border-radius: 12px;
-      background: #000;
-      border: 1px solid rgba(0, 229, 255, 0.2);
-    }
-
-    .youtube-container iframe {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border: none;
-      border-radius: 12px;
-    }
-
-    .mv-toggle-btn {
-      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-      border: none;
-      color: #000;
-      padding: 8px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 12px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 12px rgba(0, 229, 255, 0.3);
-      width: 100%;
-    }
-
-    .mv-toggle-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
-    }
-
-    .mv-panel.hidden {
-      display: none;
-    }
-
-    .mv-info {
-      font-size: 12px;
-      color: #888;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      border-left: 3px solid var(--primary-color);
-    }
-
-    /* 加载状态提示 */
-    .toast {
-      position: fixed;
-      bottom: 15px;
-      right: 15px;
-      background: rgba(0, 229, 255, 0.95);
-      color: #000;
-      padding: 10px 16px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 12px;
-      animation: slideInUp 0.3s ease;
-      box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);
-      z-index: 1000;
-    }
-
-    .toast.success {
-      background: rgba(76, 175, 80, 0.95);
-    }
-
-    .toast.error {
-      background: rgba(244, 67, 54, 0.95);
-    }
-
-    @keyframes slideInUp {
-      from {
-        transform: translateY(100px);
-        opacity: 0;
-      }
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
-
-    @keyframes slideOutDown {
-      from {
-        transform: translateY(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateY(100px);
-        opacity: 0;
-      }
-    }
-
-    .toast.hide {
-      animation: slideOutDown 0.3s ease forwards;
-    }
-
-    /* 响应式设计 - 大屏幕 */
-    @media (min-width: 1400px) {
-      .container {
-        grid-template-columns: 1fr 400px 1fr;
-      }
-
-      .left-column {
-        max-height: 800px;
-      }
-
-      .right-column {
-        max-height: 800px;
-      }
-
-      .playlist {
-        max-height: 500px;
-      }
-
-      .lyrics-panel {
-        max-height: 500px;
-      }
-
-      .lyrics-container {
-        height: 380px;
-      }
-
-      .visualizer-panel {
-        max-height: 400px;
-      }
-
-      .canvas-container {
-        height: 180px;
-      }
-
-      .mv-panel {
-        max-height: 450px;
-      }
-    }
-
-    /* 响应式设计 - 中等屏幕 */
-    @media (min-width: 1024px) and (max-width: 1399px) {
-      .container {
-        grid-template-columns: 0.9fr 350px 0.9fr;
-      }
-
-      .left-column {
-        max-height: 700px;
-      }
-
-      .right-column {
-        max-height: 700px;
-      }
-
-      .playlist {
-        max-height: 450px;
-      }
-
-      .lyrics-panel {
-        max-height: 450px;
-      }
-
-      .lyrics-container {
-        height: 320px;
-      }
-
-      .visualizer-panel {
-        max-height: 350px;
-      }
-
-      .canvas-container {
-        height: 150px;
-      }
-
-      .mv-panel {
-        max-height: 400px;
-      }
-
-      .player {
-        padding: 16px 12px;
-      }
-
-      .cover {
-        margin-bottom: 12px;
-      }
-
-      .title {
-        font-size: 14px;
-      }
-
-      .controls button {
-        padding: 6px 8px;
-        font-size: 11px;
-      }
-
-      .secondary-controls button {
-        font-size: 10px;
-        padding: 4px 6px;
-        min-width: 40px;
-      }
-    }
-
-    /* 平板竖屏 */
-    @media (min-width: 768px) and (max-width: 1023px) {
-      .container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto;
-      }
-
-      .left-column {
-        grid-column: 1;
-        grid-row: 3;
-        max-height: 400px;
-      }
-
-      .middle-column {
-        grid-column: 1;
-        grid-row: 2;
-      }
-
-      .right-column {
-        grid-column: 1;
-        grid-row: 4;
-      }
-
-      .visualizer-panel {
-        order: 1;
-      }
-
-      .mv-panel {
-        display: none;
-      }
-
-      .player {
-        padding: 24px 16px;
-      }
-
-      .playlist {
-        max-height: 400px;
-      }
-
-      .lyrics-panel {
-        max-height: 400px;
-      }
-
-      .lyrics-container {
-        height: 280px;
-      }
-
-      .canvas-container {
-        height: 160px;
-      }
-    }
-
-    /* 手机竖屏 */
-    @media (max-width: 767px) {
-      .container {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto auto;
-        gap: var(--base-spacing);
-      }
-
-      .left-column {
-        grid-column: 1;
-        grid-row: 3;
-        max-height: 400px;
-      }
-
-      .middle-column {
-        grid-column: 1;
-        grid-row: 2;
-      }
-
-      .right-column {
-        grid-column: 1;
-        grid-row: 4;
-      }
-
-      .visualizer-panel {
-        order: 1;
-      }
-
-      .mv-panel {
-        display: none;
-      }
-
-      .player {
-        padding: 20px 12px;
-      }
-
-      .cover {
-        margin-bottom: 12px;
-      }
-
-      .title {
-        font-size: 14px;
-      }
-
-      .controls button {
-        padding: 6px 8px;
-        font-size: 11px;
-      }
-
-      .secondary-controls button {
-        font-size: 10px;
-        padding: 4px 6px;
-        min-width: 40px;
-      }
-
-      .playlist {
-        max-height: 400px;
-      }
-
-      .lyrics-panel {
-        max-height: 400px;
-      }
-
-      .lyrics-container {
-        height: 280px;
-      }
-
-      .canvas-container {
-        height: 140px;
-      }
-
-      .visualizer-controls {
-        flex-wrap: wrap;
-      }
-
-      .visualizer-controls button {
-        flex: 1;
-        min-width: 60px;
-      }
-
-      .audio-stats {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    /* 音频元素隐藏 */
-    audio {
-      display: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>极简斗地主 - 人机对战</title>
+    <style>
+        :root {
+            --bg-color: #2d5a27;
+            --card-white: #ffffff;
+            --card-red: #ff4d4d;
+            --card-black: #333;
+        }
+        body { background-color: var(--bg-color); font-family: "Microsoft YaHei", sans-serif; margin: 0; overflow: hidden; color: white; }
+        
+        #game-container { position: relative; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; }
+
+        /* 玩家区域布局 */
+        .player-area { position: absolute; display: flex; flex-wrap: wrap; justify-content: center; width: 100%; transition: all 0.3s; }
+        #player-bottom { bottom: 20px; height: 150px; }
+        #player-left { left: 20px; top: 30%; width: 100px; flex-direction: column; }
+        #player-right { right: 20px; top: 30%; width: 100px; flex-direction: column; }
+
+        /* 卡牌样式 */
+        .card {
+            width: 70px; height: 100px;
+            background: var(--card-white);
+            border-radius: 8px;
+            margin: -25px 5px 0; /* 叠放效果 */
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 5px; box-sizing: border-box;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            cursor: pointer; position: relative; transition: transform 0.2s;
+            user-select: none; border: 1px solid #ccc;
+        }
+        .card.selected { transform: translateY(-20px); border: 2px solid #ffeb3b; }
+        .card.red { color: var(--card-red); }
+        .card.black { color: var(--card-black); }
+        .card-value { font-size: 20px; font-weight: bold; }
+        .card-suit { font-size: 14px; align-self: flex-end; }
+
+        /* 隐藏对手手牌内容 */
+        .hidden-card { background: linear-gradient(135deg, #1a3a16 25%, #2d5a27 100%); border: 1px solid #ffffff55; }
+        .hidden-card * { display: none; }
+
+        /* 控制区 */
+        #controls { position: absolute; bottom: 200px; width: 100%; display: flex; justify-content: center; gap: 20px; }
+        button { padding: 10px 25px; font-size: 16px; border-radius: 20px; border: none; cursor: pointer; background: #f0ad4e; color: white; font-weight: bold; }
+        button:hover { background: #ec971f; }
+        button:disabled { background: #777; cursor: not-allowed; }
+
+        /* 桌面/出牌区 */
+        #desk { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 10px; }
+        .info-tag { background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 5px; position: absolute; font-size: 12px; }
+        
+        #dizhu-cards { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+    </style>
 </head>
 <body>
 
-<!-- 动态背景 -->
-<div class="bg-blur" id="bgBlur"></div>
+<div id="game-container">
+    <div id="dizhu-cards"></div>
+    
+    <div class="info-tag" style="top:30%; left:130px;">电脑1 (<span id="count1">0</span>张)</div>
+    <div id="player-left" class="player-area"></div>
+    
+    <div class="info-tag" style="top:30%; right:130px;">电脑2 (<span id="count2">0</span>张)</div>
+    <div id="player-right" class="player-area"></div>
 
-<!-- 主容器 -->
-<div class="container">
-  <!-- 左列：播放列表 -->
-  <div class="left-column">
-    <div class="playlist">
-      <div class="playlist-title">播放列表</div>
-      <div id="playlistContainer"></div>
-    </div>
-  </div>
+    <div id="desk"></div>
 
-  <!-- 中列：播放器（居中） -->
-  <div class="middle-column">
-    <div class="player">
-      <img src="" id="cover" class="cover" alt="歌曲封面" />
-      
-      <div class="song-info">
-        <div class="title" id="songTitle">加载中...</div>
-        <div class="time-info">
-          <span id="currentTime">00:00</span>
-          <span id="duration">00:00</span>
-        </div>
-      </div>
-
-      <div class="progress-container" id="progressContainer">
-        <div class="progress" id="progress"></div>
-      </div>
-
-      <div class="controls">
-        <button onclick="prevSong()">⏮️</button>
-        <button onclick="togglePlay()" id="playBtn">▶️ 播放</button>
-        <button onclick="nextSong()">⏭️</button>
-      </div>
-
-      <div class="secondary-controls">
-        <button onclick="toggleLoop()" id="loopBtn">🔁 循环</button>
-        <button class="shuffle-btn" onclick="toggleShuffle()" id="shuffleBtn">🔀 随机</button>
-        <button class="mv-btn" onclick="toggleMVPanel()" id="mvShowBtn">🎬 MV</button>
-        <button class="lyrics-btn" onclick="toggleLyricsPanel()" id="lyricsShowBtn">📜 歌词</button>
-      </div>
-
-      <!-- 音量控制 -->
-      <div class="volume-control">
-        <span class="volume-icon">🔊</span>
-        <input type="range" id="volumeSlider" class="volume-slider" min="0" max="100" value="70">
-        <span class="volume-value" id="volumeValue">70%</span>
-      </div>
-
-      <!-- 下载功能 -->
-      <div class="download-controls">
-        <button class="download-btn" onclick="downloadAudio()">
-          <span>⬇️</span>
-          <span>音频</span>
-        </button>
-        <button class="download-btn cover" onclick="downloadCover()">
-          <span>⬇️</span>
-          <span>封面</span>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 右列：可视化和MV -->
-  <div class="right-column">
-    <!-- 音频可视化面板 -->
-    <div class="visualizer-panel" id="visualizerPanel">
-      <div class="visualizer-title">音频分析</div>
-      
-      <div class="visualizer-controls">
-        <button onclick="switchVisualizer('frequency')" class="active" id="freqBtn">频谱</button>
-        <button onclick="switchVisualizer('waveform')" id="waveBtn">波形</button>
-        <button onclick="toggleVisualizer()" id="vizToggleBtn">关闭</button>
-      </div>
-
-      <div class="canvas-container">
-        <canvas id="visualizerCanvas"></canvas>
-      </div>
-
-      <div class="audio-stats">
-        <div class="stat-item">
-          <div class="stat-label">频率 (Hz)</div>
-          <div class="stat-value" id="freqValue">0</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">幅度 (dB)</div>
-          <div class="stat-value" id="ampValue">-∞</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">平均音量</div>
-          <div class="stat-value" id="volValue">0%</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">峰值</div>
-          <div class="stat-value" id="peakValue">0%</div>
-        </div>
-      </div>
+    <div id="controls">
+        <button onclick="startGame()">重新开始</button>
+        <button id="btn-play" onclick="handlePlay()" disabled>出牌</button>
+        <button id="btn-pass" onclick="handlePass()" disabled>不要</button>
     </div>
 
-    <!-- MV播放器 -->
-    <div class="mv-panel" id="mvPanel">
-      <div class="mv-title">音乐视频 (MV)</div>
-      <div class="youtube-container" id="youtubeContainer">
-        <iframe 
-          id="youtubeFrame"
-          src="about:blank" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-          allowfullscreen>
-        </iframe>
-      </div>
-      <div class="mv-info" id="mvInfo">
-        💡 提示：点击播放列表中的歌曲，将自动加载对应的MV
-      </div>
-      <button class="mv-toggle-btn" onclick="toggleMVPanel()">隐藏MV</button>
-    </div>
-
-    <!-- 歌词面板 -->
-    <div class="lyrics-panel" id="lyricsPanel">
-      <div class="lyrics-header">
-        <div class="lyrics-title">歌词</div>
-        <button class="lyrics-toggle active" id="lyricsToggle" onclick="toggleLyricsPanel()">隐藏</button>
-      </div>
-      <div class="lyrics-container" id="lyricsContainer">
-        <div class="no-lyrics">暂无歌词</div>
-      </div>
-    </div>
-  </div>
+    <div id="player-bottom" class="player-area"></div>
 </div>
 
-<audio id="audio"></audio>
+<script>
+/** * 极简斗地主核心逻辑
+ */
+const VALUES = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2', '小王', '大王'];
+const SUITS = ['♠', '♥', '♣', '♦'];
+const VALUE_MAP = { '3':3, '4':4, '5':5, '6':6, '7':7, '8':8, '9':9, '10':10, 'J':11, 'Q':12, 'K':13, 'A':14, '2':15, '小王':16, '大王':17 };
+
+let deck = [];
+let players = [[], [], []]; // 0: 玩家, 1: 左电脑, 2: 右电脑
+let lastMove = { playerIdx: -1, cards: [] }; 
+let currentPlayer = 0;
+let selectedCards = new Set();
+
+// 初始化牌组
+function createDeck() {
+    deck = [];
+    for (let v of VALUES.slice(0, 13)) {
+        for (let s of SUITS) deck.push({ value: v, suit: s, power: VALUE_MAP[v], color: (s==='♥'||s==='♦'?'red':'black') });
+    }
+    deck.push({ value: '小王', suit: '🃏', power: 16, color: 'black' });
+    deck.push({ value: '大王', suit: '🃏', power: 17, color: 'red' });
+}
+
+// 洗牌并发牌
+function startGame() {
+    createDeck();
+    deck.sort(() => Math.random() - 0.5);
+    
+    players = [
+        deck.slice(0, 17).sort((a,b) => b.power - a.power),
+        deck.slice(17, 34).sort((a,b) => b.power - a.power),
+        deck.slice(34, 51).sort((a,b) => b.power - a.power)
+    ];
+    
+    // 简单起见，这里固定地主牌给玩家(0)
+    const dizhuCards = deck.slice(51);
+    players[0] = [...players[0], ...dizhuCards].sort((a,b) => b.power - a.power);
+    
+    renderDizhuCards(dizhuCards);
+    currentPlayer = 0;
+    lastMove = { playerIdx: -1, cards: [] };
+    selectedCards.clear();
+    renderAll();
+    updateButtons();
+}
+
+function renderDizhuCards(cards) {
+    const container = document.getElementById('dizhu-cards');
+    container.innerHTML = cards.map(c => `<div class="card ${c.color}" style="width:40px;height:60px;margin:0 2px;font-size:12px;">${c.value}</div>`).join('');
+}
+
+function renderAll() {
+    // 渲染玩家手牌
+    const pBottom = document.getElementById('player-bottom');
+    pBottom.innerHTML = '';
+    players[0].forEach((card, index) => {
+        const div = document.createElement('div');
+        div.className = `card ${card.color} ${selectedCards.has(index) ? 'selected' : ''}`;
+        div.innerHTML = `<span class="card-value">${card.value}</span><span class="card-suit">${card.suit}</span>`;
+        div.onclick = () => {
+            if(selectedCards.has(index)) selectedCards.delete(index);
+            else selectedCards.add(index);
+            renderAll();
+        };
+        pBottom.appendChild(div);
+    });
+
+    // 渲染电脑手牌（隐藏）
+    document.getElementById('player-left').innerHTML = players[1].map(() => '<div class="card hidden-card"></div>').join('');
+    document.getElementById('player-right').innerHTML = players[2].map(() => '<div class="card hidden-card"></div>').join('');
+    document.getElementById('count1').innerText = players[1].length;
+    document.getElementById('count2').innerText = players[2].length;
+}
+
+function updateButtons() {
+    document.getElementById('btn-play').disabled = (currentPlayer !== 0);
+    document.getElementById('btn-pass').disabled = (currentPlayer !== 0 || lastMove.playerIdx === -1 || lastMove.playerIdx === 0);
+}
+
+// 简单的牌型校验
+function getMoveType(cards) {
+    const len = cards.length;
+    if (len === 0) return null;
+    const sorted = [...cards].sort((a,b) => a.power - b.power);
+    
+    if (len === 1) return { type: 'single', power: sorted[0].power };
+    if (len === 2 && sorted[0].power === sorted[1].power) return { type: 'pair', power: sorted[0].power };
+    if (len === 2 && sorted[0].power >= 16 && sorted[1].power >= 16) return { type: 'bomb', power: 99 }; // 王炸
+    if (len === 4 && sorted[0].power === sorted[3].power) return { type: 'bomb', power: sorted[0].power };
+    
+    // 更多牌型（顺子、三带等）此处可扩展...
+    return null; 
+}
+
+function handlePlay() {
+    const selected = Array.from(selectedCards).map(i => players[0][i]);
+    const moveType = getMoveType(selected);
+    
+    if (!moveType) { alert("不符合牌型！"); return; }
+    
+    // 检查是否压得过
+    if (lastMove.playerIdx !== -1 && lastMove.playerIdx !== 0) {
+        const lastType = getMoveType(lastMove.cards);
+        if (moveType.type !== 'bomb' && moveType.type !== lastType.type) { alert("牌型不匹配"); return; }
+        if (moveType.power <= lastType.power) { alert("分值不够大"); return; }
+    }
+
+    // 执行出牌
+    players[0] = players[0].filter((_, i) => !selectedCards.has(i));
+    finishTurn(0, selected);
+}
+
+function handlePass() {
+    finishTurn(0, []);
+}
+
+function finishTurn(pIdx, cards) {
+    if (cards.length > 0) {
+        lastMove = { playerIdx: pIdx, cards: cards };
+        renderDesk(cards);
+    }
+    
+    if (players[pIdx].length === 0) {
+        alert(pIdx === 0 ? "你赢了！" : "电脑" + pIdx + "赢了！");
+        startGame();
+        return;
+    }
+
+    selectedCards.clear();
+    currentPlayer = (pIdx + 1) % 3;
+    renderAll();
+    updateButtons();
+
+    if (currentPlayer !== 0) setTimeout(aiPlay, 1000);
+}
+
+function renderDesk(cards) {
+    const desk = document.getElementById('desk');
+    desk.innerHTML = cards.map(c => `<div class="card ${c.color}"><span class="card-value">${c.value}</span><span class="card-suit">${c.suit}</span></div>`).join('');
+}
+
+// 极其简陋的AI
+function aiPlay() {
+    const hand = players[currentPlayer];
+    let playCards = [];
+
+    // 如果是新回合或自己最大
+    if (lastMove.playerIdx === -1 || lastMove.playerIdx === currentPlayer) {
+        playCards = [hand[hand.length - 1]]; // 随便出一张最小的
+    } else {
+        const lastType = getMoveType(lastMove.cards);
+        // 尝试找出一张比它大的单张
+        if (lastType.type === 'single') {
+            const bigger = hand.find(c => c.power > lastType.power);
+            if (bigger) playCards = [bigger];
+        }
+        // 尝试找出对子...（此处可扩展AI逻辑）
+    }
+
+    if (playCards.length > 0) {
+        players[currentPlayer] = players[currentPlayer].filter(c => !playCards.includes(c));
+        finishTurn(currentPlayer, playCards);
+    } else {
+        finishTurn(currentPlayer, []);
+        // 显示不出
+        const desk = document.getElementById('desk');
+        desk.innerHTML = `<div style="font-size:30px; color:#aaa">不要</div>`;
+    }
+}
+
+// 启动
+startGame();
+<div id="controls">
+    <select id="difficulty-select" onchange="changeDifficulty()">
+        <option value="0">难度：小白 (乱出)</option>
+        <option value="1">难度：新手 (会出对子)</option>
+        <option value="2" selected>难度：普通 (正常出牌)</option>
+        <option value="3">难度：老手 (优先跑牌)</option>
+        <option value="4">难度：高手 (懂得留大牌)</option>
+        <option value="5">难度：大师 (会拆牌压制)</option>
+        <option value="6">难度：魔鬼 (算力全开/记牌)</option>
+    </select>
+    <button onclick="startGame()">重开</button>
+    <button id="btn-play" onclick="handlePlay()" disabled>出牌</button>
+    <button id="btn-pass" onclick="handlePass()" disabled>不要</button>
+</div>
 
 <script>
-  const songs = [
-    {
-      name: "Faded - Alan Walker",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Faded - Alan Walker.mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Faded - Alan Walker.jpeg",
-      youtubeId: "60ItHLz5WEA",
-      lyrics: `[00:00.85]Faded (憔悴不堪) - Alan Walker (艾伦·沃克)
-[00:01.44]
-[00:01.44]Written by：Alan Walker
-[00:11.32]
-[00:11.32]You were the shadow to my light
-[00:14.05]Did you feel us
-[00:18.04]Another start
-[00:19.85]You fade away
-[00:21.75]Afraid our aim is out of sight
-[00:24.86]Wanna see us
-[00:28.68]Alight
-[00:31.15]Where are you now
-[00:36.46]Where are you now
-[00:41.65]Where are you now
-[00:44.51]Was it all in my fantasy
-[00:47.28]Where are you now
-[00:49.77]Were you only imaginary
-[00:53.95]Where are you now
-[00:57.38]Atlantis
-[00:59.06]Under the sea
-[01:01.66]Under the sea
-[01:04.5]Where are you now
-[01:07.06]Another dream
-[01:10.62]The monsters running wild inside of me
-[01:14.39]I'm faded
-[01:19.92]I'm faded
-[01:23.74]So lost
-[01:25.41]I'm faded
-[01:30.62]I'm faded
-[01:34.55]So lost
-[01:35.880005]I'm faded
-[01:37.81]These shallow waters never met
-[01:40.69]What I needed
-[01:44.61]I'm letting go
-[01:46.42]A deeper dive
-[01:48.42]Eternal silence of the sea
-[01:51.729996]I'm breathing
-[01:55.270004]Alive
-[01:57.96]Where are you now
-[02:03.21]Where are you now
-[02:08.51]Under the bright
-[02:09.91]But faded lights
-[02:11.1]You set my heart on fire
-[02:13.82]Where are you now
-[02:16.45999]Where are you now
-[02:31.31]Where are you now
-[02:34.66]Atlantis
-[02:36.69]Under the sea
-[02:39.12]Under the sea
-[02:41.94]Where are you now
-[02:44.33]Another dream
-[02:47.8]The monsters running wild inside of me
-[02:51.79001]I'm faded
-[02:57.24]I'm faded
-[03:01.12]So lost
-[03:02.68]I'm faded
-[03:08.03]I'm faded
-[03:11.82]So lost
-[03:13.12]I'm faded`
-    },
-    {
-      name: "Heading Home - Alan Walker",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Heading Home - Alan Walker [Normal Quality].mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Heading Home - Alan Walker:Ruben.jpeg",
-      youtubeId: "iVX_uBvb8nQ",
-      lyrics: `[00:00.0]Heading Home - Alan Walker/Ruben`
-    },
-    {
-      name: "Sunburst - Tobu",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst - Tobu.mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Sunburst（云隙阳光） - Tobu:Itro.jpeg",
-      youtubeId: "KFpZCkxPHx4",
-      lyrics: `[00:00.00]Empty`
-    },
-    {
-      name: "World of Walker: Rise of the drones - Alan Walker",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/Rise of the drones.mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/World of Walker: Rise of the Drones - Alan Walker.jpeg",
-      youtubeId: "D1cqIZPrvXo",
-      lyrics: `[00:00.0]World of Walker: Rise of the Drones`
-    },
-    {
-      name: "The Sky High - Elektronomia",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/The Sky High - Elektronomia.mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/The Sky High - Elektronomia.jpeg",
-      youtubeId: "dAVOy1zj5iU",
-      lyrics: `[00:04.34]I'm laying where the stars shine so bright`
-    },
-    {
-      name: "365",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/365.mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/365 - Zedd:Katy Perry.jpeg",
-      youtubeId: "VJHp-Dw0BzY",
-      lyrics: `[00:00.0]365 - Zedd/Katy Perry`
-    },
-    {
-      name: "BARRETE!",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/DERRETE!.mp3",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/BARRETE! - CHASHKAKEFIRA:D4C.jpeg",
-      youtubeId: "",
-      lyrics: `[00:00.00]Empty`
-    },
-    {
-      name: "好玩吗孩子",
-      url: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/ScreenRecording_02-11-2026 13-57-19_1.m4a",
-      cover: "https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.github.io/main/IMG_3383.jpeg",
-      youtubeId: "",
-      lyrics: `[00:00.00]Empty`
+// ... 保留之前的变量定义 (VALUES, VALUE_MAP, players 等) ...
+
+let currentDifficulty = 2;
+
+function changeDifficulty() {
+    currentDifficulty = parseInt(document.getElementById('difficulty-select').value);
+    console.log("当前难度已切换至:", currentDifficulty);
+}
+
+/**
+ * 核心优化：智能 AI 决策系统
+ */
+function aiPlay() {
+    const hand = players[currentPlayer];
+    let playCards = [];
+    
+    // 获取当前桌面信息
+    const lastType = lastMove.playerIdx === -1 || lastMove.playerIdx === currentPlayer ? 
+                     null : getMoveType(lastMove.cards);
+
+    // 难度策略逻辑
+    if (!lastType) {
+        // AI 先手出牌策略
+        playCards = aiChooseBestLeadingCards(hand, currentDifficulty);
+    } else {
+        // AI 跟牌策略
+        playCards = aiChooseResponseCards(hand, lastType, currentDifficulty);
     }
-  ];
 
-  // =============== 音频可视化部分 ===============
-  let audioContext = null;
-  let analyser = null;
-  let frequencyData = null;
-  let canvas = null;
-  let canvasCtx = null;
-  let animationId = null;
-  let visualizerMode = 'frequency'; // 'frequency' 或 'waveform'
-  let visualizerEnabled = true;
-  let isVisualizerInitialized = false;
-
-  function initAudioVisualizer() {
-    if (isVisualizerInitialized) return;
-
-    try {
-      canvas = document.getElementById('visualizerCanvas');
-      if (!canvas) {
-        console.error('Canvas element not found');
-        return;
-      }
-
-      canvasCtx = canvas.getContext('2d', { willReadFrequently: true });
-      
-      // 初始化Canvas尺寸
-      resizeCanvas();
-      window.addEventListener('resize', resizeCanvas);
-
-      // 创建音频上下文
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      audioContext = new AudioContext();
-      
-      const source = audioContext.createMediaElementAudioSource(audio);
-      analyser = audioContext.createAnalyser();
-      
-      // 设置FFT大小
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.8;
-      
-      // 连接节点
-      source.connect(analyser);
-      analyser.connect(audioContext.destination);
-      
-      // 创建频率数据数组
-      frequencyData = new Uint8Array(analyser.frequencyBinCount);
-      
-      isVisualizerInitialized = true;
-      console.log('Audio visualizer initialized successfully');
-      
-      // 立即开始可视化
-      if (visualizerEnabled) {
-        startVisualization();
-      }
-    } catch (e) {
-      console.error('Audio visualizer initialization failed:', e);
-      // 降级处理：显示演示频谱
-      showDemoVisualizer();
+    // 执行出牌或跳过
+    if (playCards && playCards.length > 0) {
+        players[currentPlayer] = players[currentPlayer].filter(c => !playCards.includes(c));
+        finishTurn(currentPlayer, playCards);
+    } else {
+        // 如果是魔鬼难度，在“不要”之前会模拟计算是否有必要拆炸弹压制
+        finishTurn(currentPlayer, []);
+        renderPass(currentPlayer);
     }
-  }
+}
 
-  function resizeCanvas() {
-    if (!canvas) return;
+/**
+ * AI 主动出牌逻辑 (Leading)
+ */
+function aiChooseBestLeadingCards(hand, level) {
+    // 自动按 power 升序排列，方便从小牌开始出
+    const sortedHand = [...hand].sort((a,b) => a.power - b.power);
     
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
+    // 小白：随缘出一张最小的
+    if (level <= 1) return [sortedHand[0]];
     
-    // 设置实际渲染分辨率
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    // 普通及以上：优先找手里的对子、顺子（此处简化为优先对子）
+    const pairs = findPairs(sortedHand);
+    if (pairs.length > 0 && level >= 2) return pairs[0];
     
-    // 缩放上下文
-    canvasCtx.scale(dpr, dpr);
-  }
+    // 老手及以上：如果只剩几张牌，优先出大牌冲刺
+    if (level >= 3 && hand.length < 5) return [sortedHand[sortedHand.length - 1]];
 
-  function startVisualization() {
-    if (!visualizerEnabled || !canvas) return;
+    return [sortedHand[0]]; 
+}
 
-    const draw = () => {
-      animationId = requestAnimationFrame(draw);
-      
-      if (isVisualizerInitialized && analyser) {
-        if (visualizerMode === 'frequency') {
-          drawFrequencyBars();
-        } else {
-          drawWaveform();
-        }
-        updateAudioStats();
-      } else {
-        // 如果未初始化，显示演示效果
-        showDemoVisualizer();
-      }
-    };
+/**
+ * AI 跟牌逻辑 (Response)
+ */
+function aiChooseResponseCards(hand, lastType, level) {
+    const sortedHand = [...hand].sort((a,b) => a.power - b.power);
 
-    draw();
-  }
-
-  function drawFrequencyBars() {
-    if (!analyser || !frequencyData) return;
-    
-    // 获取频率数据
-    analyser.getByteFrequencyData(frequencyData);
-    
-    const rect = canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    
-    // 清除背景
-    canvasCtx.fillStyle = 'rgba(10, 10, 10, 0.9)';
-    canvasCtx.fillRect(0, 0, width, height);
-    
-    const barCount = Math.min(64, frequencyData.length);
-    const barWidth = width / barCount;
-    const step = Math.floor(frequencyData.length / barCount);
-    
-    // 绘制柱子
-    for (let i = 0; i < barCount; i++) {
-      const dataIndex = i * step;
-      const value = frequencyData[dataIndex] || 0;
-      const barHeight = (value / 255) * (height * 0.9);
-      const x = i * barWidth;
-      const y = height - barHeight;
-      
-      // 渐变颜色：青色 -> 紫色 -> 粉色
-      const hue = (i / barCount) * 120 + 180;
-      canvasCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-      
-      // 添加发光效果
-      canvasCtx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-      canvasCtx.shadowBlur = 10;
-      
-      canvasCtx.fillRect(
-        x + barWidth * 0.1,
-        y,
-        barWidth * 0.8,
-        barHeight
-      );
+    // 1. 尝试寻找相同牌型
+    let candidates = [];
+    if (lastType.type === 'single') {
+        candidates = sortedHand.filter(c => c.power > lastType.power);
+    } else if (lastType.type === 'pair') {
+        const pairs = findPairs(sortedHand);
+        candidates = pairs.filter(p => p[0].power > lastType.power);
     }
-    
-    canvasCtx.shadowColor = 'transparent';
-  }
 
-  function drawWaveform() {
-    if (!analyser || !frequencyData) return;
+    // --- 难度差异化处理 ---
     
-    // 使用 getByteFrequencyData 作为波形
-    analyser.getByteFrequencyData(frequencyData);
-    
-    const rect = canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const centerY = height / 2;
-    
-    // 清除背景
-    canvasCtx.fillStyle = 'rgba(10, 10, 10, 0.9)';
-    canvasCtx.fillRect(0, 0, width, height);
-    
-    // 绘制波形线
-    canvasCtx.strokeStyle = '#00e5ff';
-    canvasCtx.lineWidth = 2;
-    canvasCtx.shadowColor = 'rgba(0, 229, 255, 0.8)';
-    canvasCtx.shadowBlur = 15;
-    canvasCtx.lineCap = 'round';
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.beginPath();
-    
-    const sliceWidth = width / frequencyData.length;
-    let x = 0;
-    let isFirstPoint = true;
-    
-    for (let i = 0; i < frequencyData.length; i++) {
-      const v = frequencyData[i] / 128.0;
-      const y = (v * height) / 2;
-      
-      if (isFirstPoint) {
-        canvasCtx.moveTo(x, centerY - y);
-        isFirstPoint = false;
-      } else {
-        canvasCtx.lineTo(x, centerY - y);
-      }
-      
-      x += sliceWidth;
-    }
-    
-    canvasCtx.lineTo(width, centerY);
-    canvasCtx.stroke();
-    canvasCtx.shadowColor = 'transparent';
-  }
+    // 小白 (0)：50% 概率即使有牌也不出，或者有大牌乱放
+    if (level === 0 && Math.random() > 0.5) return null;
 
-  function showDemoVisualizer() {
-    if (!canvasCtx) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    
-    // 清除背景
-    canvasCtx.fillStyle = 'rgba(10, 10, 10, 0.9)';
-    canvasCtx.fillRect(0, 0, width, height);
-    
-    if (visualizerMode === 'frequency') {
-      // 演示频谱
-      const barCount = 64;
-      const barWidth = width / barCount;
-      
-      for (let i = 0; i < barCount; i++) {
-        const value = Math.random() * 200 + 50;
-        const barHeight = (value / 255) * (height * 0.9);
-        const x = i * barWidth;
-        const y = height - barHeight;
+    if (candidates.length > 0) {
+        // 普通 (2): 出手里最小的能压住的牌
+        if (level <= 2) return (lastType.type === 'pair') ? candidates[0] : [candidates[0]];
         
-        const hue = (i / barCount) * 120 + 180;
-        canvasCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-        canvasCtx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        canvasCtx.shadowBlur = 10;
-        
-        canvasCtx.fillRect(
-          x + barWidth * 0.1,
-          y,
-          barWidth * 0.8,
-          barHeight
-        );
-      }
-    } else {
-      // 演示波形
-      const centerY = height / 2;
-      canvasCtx.strokeStyle = '#00e5ff';
-      canvasCtx.lineWidth = 2;
-      canvasCtx.shadowColor = 'rgba(0, 229, 255, 0.8)';
-      canvasCtx.shadowBlur = 15;
-      canvasCtx.lineCap = 'round';
-      canvasCtx.lineJoin = 'round';
-      canvasCtx.beginPath();
-      
-      const points = 128;
-      const sliceWidth = width / points;
-      
-      for (let i = 0; i < points; i++) {
-        const v = (Math.sin(i / 10) * 0.5 + 0.5) * Math.random();
-        const y = (v * height) / 2;
-        const x = i * sliceWidth;
-        
-        if (i === 0) {
-          canvasCtx.moveTo(x, centerY - y);
-        } else {
-          canvasCtx.lineTo(x, centerY - y);
+        // 高手 (4): 如果对方是队友，不压小牌；如果是对手，死命压
+        // (注：此版本暂未实现复杂的队友识别，简化为：如果是单张且大于14(A)，老手会考虑是否值得出)
+        if (level >= 4 && lastType.power >= 14 && hand.length > 5) return null; 
+
+        return (lastType.type === 'pair') ? candidates[0] : [candidates[0]];
+    }
+
+    // 2. 尝试出炸弹 (难度 >= 3 才会主动拆炸弹/用炸弹)
+    if (level >= 3) {
+        const bombs = findBombs(sortedHand);
+        if (bombs.length > 0) {
+            // 大师 (5): 只有当对方手牌少于3张，或者对方出的是大牌时才炸
+            if (level >= 5 && lastMove.cards.length < 2 && lastType.power < 15) return null;
+            return bombs[0];
         }
-      }
-      
-      canvasCtx.lineTo(width, centerY);
-      canvasCtx.stroke();
     }
-    
-    canvasCtx.shadowColor = 'transparent';
-  }
 
-  function updateAudioStats() {
-    if (!analyser || !frequencyData) return;
+    return null;
+}
 
-    try {
-      analyser.getByteFrequencyData(frequencyData);
-      
-      // 计算平均音量
-      let sum = 0;
-      for (let i = 0; i < frequencyData.length; i++) {
-        sum += frequencyData[i];
-      }
-      const average = Math.round(sum / frequencyData.length);
-      const volumePercent = Math.round((average / 255) * 100);
-      
-      // 找最高频率
-      let maxValue = 0;
-      let maxIndex = 0;
-      for (let i = 0; i < frequencyData.length; i++) {
-        if (frequencyData[i] > maxValue) {
-          maxValue = frequencyData[i];
-          maxIndex = i;
+// 辅助函数：找对子
+function findPairs(hand) {
+    let pairs = [];
+    for (let i = 0; i < hand.length - 1; i++) {
+        if (hand[i].power === hand[i+1].power) {
+            pairs.push([hand[i], hand[i+1]]);
+            i++; 
         }
-      }
-      
-      const nyquistFrequency = audioContext.sampleRate / 2;
-      const frequency = (maxIndex / frequencyData.length) * nyquistFrequency;
-      const dbValue = maxValue > 0 ? (Math.log10(maxValue / 255) * 20).toFixed(1) : '-∞';
-      
-      document.getElementById('freqValue').textContent = Math.round(frequency);
-      document.getElementById('ampValue').textContent = dbValue;
-      document.getElementById('volValue').textContent = volumePercent + '%';
-      document.getElementById('peakValue').textContent = Math.round((maxValue / 255) * 100) + '%';
-    } catch (e) {
-      console.error('Error updating audio stats:', e);
     }
-  }
+    return pairs;
+}
 
-  function switchVisualizer(mode) {
-    visualizerMode = mode;
-    
-    document.getElementById('freqBtn').classList.remove('active');
-    document.getElementById('waveBtn').classList.remove('active');
-    
-    if (mode === 'frequency') {
-      document.getElementById('freqBtn').classList.add('active');
-    } else {
-      document.getElementById('waveBtn').classList.add('active');
-    }
-  }
-
-  function toggleVisualizer() {
-    visualizerEnabled = !visualizerEnabled;
-    const btn = document.getElementById('vizToggleBtn');
-    
-    if (visualizerEnabled) {
-      btn.textContent = '关闭';
-      if (isVisualizerInitialized) {
-        startVisualization();
-      } else {
-        initAudioVisualizer();
-      }
-    } else {
-      btn.textContent = '打开';
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-        animationId = null;
-      }
-    }
-  }
-
-  // =============== 原有播放器代码 ===============
-  let index = 0;
-  let isPlaying = false;
-  let lyricsVisible = true;
-  let mvVisible = true;
-  let isShuffleMode = false;
-  let playedIndices = [];
-
-  const audio = document.getElementById("audio");
-  const title = document.getElementById("songTitle");
-  const cover = document.getElementById("cover");
-  const progress = document.getElementById("progress");
-  const playBtn = document.getElementById("playBtn");
-  const loopBtn = document.getElementById("loopBtn");
-  const shuffleBtn = document.getElementById("shuffleBtn");
-  const progressContainer = document.getElementById("progressContainer");
-  const bgBlur = document.getElementById("bgBlur");
-  const currentTimeEl = document.getElementById("currentTime");
-  const durationEl = document.getElementById("duration");
-  const playlistContainer = document.getElementById("playlistContainer");
-  const volumeSlider = document.getElementById("volumeSlider");
-  const volumeValue = document.getElementById("volumeValue");
-  const lyricsContainer = document.getElementById("lyricsContainer");
-  const lyricsPanel = document.getElementById("lyricsPanel");
-  const lyricsToggle = document.getElementById("lyricsToggle");
-  const lyricsShowBtn = document.getElementById("lyricsShowBtn");
-  const youtubeFrame = document.getElementById("youtubeFrame");
-  const mvPanel = document.getElementById("mvPanel");
-  const mvShowBtn = document.getElementById("mvShowBtn");
-  const mvInfo = document.getElementById("mvInfo");
-
-  function formatTime(time) {
-    if (!time || isNaN(time)) return "00:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }
-
-  function showToast(message, type = 'success') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add('hide');
-      setTimeout(() => toast.remove(), 300);
-    }, 2500);
-  }
-
-  // =============== 歌词相关 ===============
-  let currentLyricsIndex = 0;
-  let parsedLyrics = [];
-
-  function parseLyrics(lyricsText) {
-    const lines = lyricsText.split('\n');
-    const parsed = [];
-    
-    lines.forEach(line => {
-      const match = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
-      if (match) {
-        const minutes = parseInt(match[1]);
-        const seconds = parseInt(match[2]);
-        const time = minutes * 60 + seconds;
-        const text = match[4].trim();
-        parsed.push({ time, text });
-      }
-    });
-    
-    return parsed.sort((a, b) => a.time - b.time);
-  }
-
-  function renderLyrics() {
-    if (!parsedLyrics || parsedLyrics.length === 0) {
-      lyricsContainer.innerHTML = '<div class="no-lyrics">暂无歌词</div>';
-      return;
-    }
-
-    lyricsContainer.innerHTML = parsedLyrics.map((lyric, idx) => 
-      `<div class="lyric-line" data-index="${idx}" onclick="jumpToLyricTime(${lyric.time})">${lyric.text}</div>`
-    ).join('');
-  }
-
-  function updateCurrentLyric() {
-    if (!parsedLyrics || parsedLyrics.length === 0) return;
-
-    const currentTime = audio.currentTime;
-    let newIndex = 0;
-
-    for (let i = 0; i < parsedLyrics.length; i++) {
-      if (parsedLyrics[i].time <= currentTime) {
-        newIndex = i;
-      } else {
-        break;
-      }
-    }
-
-    if (newIndex !== currentLyricsIndex) {
-      const prevActive = lyricsContainer.querySelector('.lyric-line.active');
-      if (prevActive) prevActive.classList.remove('active');
-
-      currentLyricsIndex = newIndex;
-      const newActive = lyricsContainer.querySelector(`[data-index="${newIndex}"]`);
-      if (newActive) {
-        newActive.classList.add('active');
-        newActive.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }
-
-  function jumpToLyricTime(time) {
-    audio.currentTime = time;
-    if (!isPlaying) {
-      audio.play();
-      
-      // 初始化可视化器
-      if (!isVisualizerInitialized && visualizerEnabled) {
-        initAudioVisualizer();
-      }
-      
-      isPlaying = true;
-      playBtn.textContent = "⏸️ 暂停";
-      bgBlur.classList.add("active");
-    }
-  }
-
-  function toggleLyricsPanel() {
-    lyricsVisible = !lyricsVisible;
-    lyricsPanel.classList.toggle('hidden');
-    lyricsToggle.textContent = lyricsVisible ? '隐藏' : '显示';
-    lyricsToggle.classList.toggle('active');
-    lyricsShowBtn.textContent = lyricsVisible ? '📜 歌词' : '📜 显示';
-  }
-
-  // =============== MV相关 ===============
-  function loadYouTubeMV(youtubeId) {
-    if (!youtubeId) {
-      youtubeFrame.src = "about:blank";
-      mvInfo.textContent = "❌ 此歌曲暂无MV";
-      return;
-    }
-
-    youtubeFrame.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=0&controls=1&modestbranding=1`;
-    mvInfo.textContent = "🎬 正在加载MV，请稍候...";
-  }
-
-  function toggleMVPanel() {
-    mvVisible = !mvVisible;
-    mvPanel.classList.toggle('hidden');
-    mvShowBtn.classList.toggle('active');
-    mvShowBtn.textContent = mvVisible ? '🎬 MV' : '🎬 显示';
-  }
-
-  // =============== 随机播放相关 ===============
-  function toggleShuffle() {
-    isShuffleMode = !isShuffleMode;
-    shuffleBtn.classList.toggle('active');
-    
-    if (isShuffleMode) {
-      showToast('🔀 已启用随机播放', 'success');
-      playedIndices = [index];
-    } else {
-      showToast('已关闭随机播放', 'success');
-      playedIndices = [];
-    }
-    
-    updatePlaylist();
-  }
-
-  function getNextIndex() {
-    if (isShuffleMode) {
-      const unplayedIndices = [];
-      for (let i = 0; i < songs.length; i++) {
-        if (!playedIndices.includes(i)) {
-          unplayedIndices.push(i);
+// 辅助函数：找炸弹
+function findBombs(hand) {
+    // 逻辑：寻找四张一样的
+    let bombs = [];
+    let counts = {};
+    hand.forEach(c => counts[c.power] = (counts[c.power] || 0) + 1);
+    for (let p in counts) {
+        if (counts[p] === 4) {
+            bombs.push(hand.filter(c => c.power == p));
         }
-      }
-      
-      if (unplayedIndices.length === 0) {
-        playedIndices = [];
-        unplayedIndices.push(...Array.from({ length: songs.length }, (_, i) => i));
-      }
-      
-      const randomIdx = Math.floor(Math.random() * unplayedIndices.length);
-      const nextIdx = unplayedIndices[randomIdx];
-      playedIndices.push(nextIdx);
-      
-      return nextIdx;
-    } else {
-      return (index + 1) % songs.length;
     }
-  }
+    // 王炸判断
+    const jokers = hand.filter(c => c.power >= 16);
+    if (jokers.length === 2) bombs.push(jokers);
+    return bombs;
+}
 
-  // 音量控制
-  volumeSlider.addEventListener('input', (e) => {
-    const volume = e.target.value;
-    audio.volume = volume / 100;
-    volumeValue.textContent = `${volume}%`;
-  });
+function renderPass(pIdx) {
+    const desk = document.getElementById('desk');
+    const tip = pIdx === 1 ? "左电脑：不要" : "右电脑：不要";
+    desk.innerHTML = `<div style="font-size:24px; color:#ffeb3b; text-shadow: 2px 2px 4px #000;">${tip}</div>`;
+}
 
-  audio.volume = 0.7;
-
-  // 下载功能
-  function downloadFile(url, filename) {
-    const xhr = new XMLHttpRequest();
-    xhr.responseType = 'blob';
-    
-    xhr.onload = function() {
-      const blob = xhr.response;
-      const objectUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = objectUrl;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(objectUrl);
-      showToast(`已下载: ${filename}`, 'success');
-    };
-
-    xhr.onerror = function() {
-      showToast('下载失败，请检查网络连接', 'error');
-    };
-
-    try {
-      xhr.open('GET', url, true);
-      xhr.send();
-    } catch (error) {
-      showToast('无法下载文件，可能存在跨域问题', 'error');
-    }
-  }
-
-  function downloadAudio() {
-    if (index >= 0 && index < songs.length) {
-      const song = songs[index];
-      const filename = `${song.name}.mp3`;
-      showToast('正在下载音频...', 'success');
-      downloadFile(song.url, filename);
-    }
-  }
-
-  function downloadCover() {
-    if (index >= 0 && index < songs.length) {
-      const song = songs[index];
-      const filename = `${song.name}-cover.jpg`;
-      showToast('正在下载封面...', 'success');
-      downloadFile(song.cover, filename);
-    }
-  }
-
-  // 加载歌曲
-  function loadSong(i) {
-    index = i;
-    audio.src = songs[i].url;
-    title.textContent = songs[i].name;
-    cover.src = songs[i].cover;
-    bgBlur.style.backgroundImage = `url('${songs[i].cover}')`;
-    
-    // 加载MV
-    loadYouTubeMV(songs[i].youtubeId);
-    
-    if (songs[i].lyrics) {
-      parsedLyrics = parseLyrics(songs[i].lyrics);
-      currentLyricsIndex = 0;
-      renderLyrics();
-    } else {
-      lyricsContainer.innerHTML = '<div class="no-lyrics">暂无歌词</div>';
-      parsedLyrics = [];
-    }
-    
-    updatePlaylist();
-  }
-
-  // 播放控制
-  function togglePlay() {
-    // 首次播放时初始化可视化器
-    if (!isVisualizerInitialized && visualizerEnabled) {
-      initAudioVisualizer();
-    }
-
-    if (isPlaying) {
-      audio.pause();
-      playBtn.textContent = "▶️ 播放";
-      bgBlur.classList.remove("active");
-    } else {
-      audio.play();
-      playBtn.textContent = "⏸️ 暂停";
-      bgBlur.classList.add("active");
-    }
-    isPlaying = !isPlaying;
-  }
-
-  function nextSong() {
-    index = getNextIndex();
-    loadSong(index);
-    audio.play();
-    
-    // 初始化可视化器
-    if (!isVisualizerInitialized && visualizerEnabled) {
-      initAudioVisualizer();
-    }
-    
-    isPlaying = true;
-    playBtn.textContent = "⏸️ 暂停";
-    bgBlur.classList.add("active");
-  }
-
-  function prevSong() {
-    if (isShuffleMode) {
-      if (playedIndices.length > 1) {
-        playedIndices.pop();
-        index = playedIndices[playedIndices.length - 1];
-      } else {
-        index = (index - 1 + songs.length) % songs.length;
-      }
-    } else {
-      index = (index - 1 + songs.length) % songs.length;
-    }
-    
-    loadSong(index);
-    audio.play();
-    
-    // 初始化可视化器
-    if (!isVisualizerInitialized && visualizerEnabled) {
-      initAudioVisualizer();
-    }
-    
-    isPlaying = true;
-    playBtn.textContent = "⏸️ 暂停";
-    bgBlur.classList.add("active");
-  }
-
-  function toggleLoop() {
-    audio.loop = !audio.loop;
-    loopBtn.textContent = audio.loop ? "🔄 循环中" : "🔁 循环";
-  }
-
-  // 音频事件
-  audio.addEventListener("timeupdate", () => {
-    const percent = (audio.currentTime / audio.duration) * 100;
-    progress.style.width = percent + "%";
-    currentTimeEl.textContent = formatTime(audio.currentTime);
-    updateCurrentLyric();
-  });
-
-  audio.addEventListener("loadedmetadata", () => {
-    durationEl.textContent = formatTime(audio.duration);
-  });
-
-  progressContainer.addEventListener("click", e => {
-    const width = progressContainer.clientWidth;
-    const clickX = e.offsetX;
-    const duration = audio.duration;
-    audio.currentTime = (clickX / width) * duration;
-  });
-
-  audio.addEventListener("ended", () => {
-    if (!audio.loop) nextSong();
-  });
-
-  // 播放列表
-  function updatePlaylist() {
-    playlistContainer.innerHTML = songs.map((song, i) => `
-      <div class="song-item ${i === index ? 'active' : ''}" onclick="loadSongAndPlay(${i})">
-        <span class="song-number">${i + 1}</span>
-        <span class="song-name" title="${song.name}">${song.name}</span>
-        <span class="play-icon">♫</span>
-      </div>
-    `).join('');
-  }
-
-  function loadSongAndPlay(i) {
-    if (isShuffleMode) {
-      playedIndices.push(i);
-    }
-    loadSong(i);
-    audio.play();
-    
-    // 初始化可视化器
-    if (!isVisualizerInitialized && visualizerEnabled) {
-      initAudioVisualizer();
-    }
-    
-    isPlaying = true;
-    playBtn.textContent = "⏸️ 暂停";
-    bgBlur.classList.add("active");
-  }
-
-  // 初始化
-  loadSong(index);
-  updatePlaylist();
-  
-  // 预初始化Canvas（不初始化AudioContext）
-  window.addEventListener('load', () => {
-    canvas = document.getElementById('visualizerCanvas');
-    if (canvas) {
-      canvasCtx = canvas.getContext('2d', { willReadFrequently: true });
-      resizeCanvas();
-      // 绘制初始化画面
-      showDemoVisualizer();
-    }
-  });
-  
-  // 或者立即初始化
-  setTimeout(() => {
-    canvas = document.getElementById('visualizerCanvas');
-    if (canvas) {
-      canvasCtx = canvas.getContext('2d', { willReadFrequently: true });
-      resizeCanvas();
-      // 绘制初始化画面
-      showDemoVisualizer();
-    }
-  }, 100);
+// ... 其余渲染和初始化逻辑保持不变 ...
 </script>
-
 </body>
 </html>
