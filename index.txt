@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>PIXEL POKER: QUANTUM GLITCH</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+        :root { --bg: #08080c; --gold: #ffcc00; --red: #ff3e3e; --white: #ececec; }
+        body { margin: 0; background: var(--bg); font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; transition: 0.1s; }
+
+        /* 超进化震动与崩坏 */
+        @keyframes quantum-break {
+            0% { transform: translate(0); filter: hue-rotate(0deg) contrast(1); }
+            10% { transform: translate(-10px, 5px); filter: hue-rotate(90deg) contrast(5); }
+            20% { transform: translate(10px, -5px) scale(1.1); filter: invert(1); }
+            40% { transform: translate(-5px, 10px); filter: saturate(10); }
+            100% { transform: translate(0); filter: none; }
+        }
+        .quantum-bomb { animation: quantum-break 0.6s steps(6) forwards; }
+
+        #stage { height: 100vh; display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
+        #ui-top { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 4px solid var(--white); background: #12121e; }
+        
+        .hand-area { display: flex; justify-content: center; align-items: center; min-height: 150px; position: relative; }
+        .card {
+            width: 75px; height: 105px; background: var(--white); color: #000; border: 4px solid #000;
+            margin-left: -40px; display: flex; flex-direction: column; padding: 6px; box-sizing: border-box;
+            cursor: pointer; position: relative; transition: top 0.2s, transform 0.1s;
+        }
+        .card.selected { transform: translateY(-45px) !important; border-color: var(--gold); z-index: 100 !important; }
+        .card.back { background: #2a4494; border-color: #fff; }
+        .card.red { color: var(--red); }
+        .card .v { font-size: 14px; line-height: 1; }
+
+        #desk { flex: 1; margin: 15px 0; border: 4px solid #222; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.4); }
+        .controls { display: flex; justify-content: center; gap: 15px; height: 60px; visibility: hidden; }
+        .controls.active { visibility: visible; }
+
+        button { padding: 10px 20px; background: #fff; border: 4px solid #000; font-family: inherit; font-size: 8px; cursor: pointer; box-shadow: 4px 4px 0px var(--gold); }
+        button:active { transform: translate(2px, 2px); box-shadow: none; }
+        select { background: #000; color: var(--gold); border: 2px solid #fff; font-family: inherit; font-size: 8px; padding: 5px; }
+    </style>
+</head>
+<body>
+
+<div id="stage">
+    <div id="ui-top">
+        <div>CPU:<span id="comp-cnt">0</span></div>
+        <div>
+            <select id="diff-lvl">
+                <option value="1">咸鱼 (EASY)</option>
+                <option value="2" selected>普通 (NORMAL)</option>
+                <option value="3">老手 (HARD)</option>
+                <option value="4">天网 (SKYNET)</option>
+            </select>
+        </div>
+        <div id="timer" style="color:var(--gold)">30</div>
+        <button onclick="initGame()">RESET</button>
+    </div>
+
+    <div id="hand-1" class="hand-area"></div>
+    <div id="desk">
+        <div id="desk-1" class="hand-area"></div>
+        <div id="desk-0" class="hand-area"></div>
+    </div>
+    <div class="controls" id="ui">
+        <button onclick="handlePlay()">EXECUTE</button>
+        <button onclick="handlePass()" id="btn-pass">PASS</button>
+    </div>
+    <div id="hand-0" class="hand-area"></div>
+</div>
+
+<script>
+/** 音效与逻辑核心 **/
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function sfx(t){
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); const n=audioCtx.currentTime;
+    if(t==='sel'){ o.type='square'; o.frequency.setValueAtTime(800,n); g.gain.setValueAtTime(0.05,n); o.start(); o.stop(n+0.05); }
+    else if(t==='hit'){ o.type='triangle'; o.frequency.setValueAtTime(300,n); o.frequency.exponentialRampToValueAtTime(50,n+0.2); g.gain.setValueAtTime(0.2,n); o.start(); o.stop(n+0.2); }
+    else if(t==='boom'){ o.type='sawtooth'; o.frequency.setValueAtTime(120,n); o.frequency.linearRampToValueAtTime(20,n+0.6); g.gain.setValueAtTime(0.4,n); g.gain.linearRampToValueAtTime(0,n+0.6); o.start(); o.stop(n+0.6); }
+}
+
+const POWER = { '3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14,'2':15,'S':16,'B':17 };
+let G = { hands: [[], []], last: null, turn: 0, selected: new Set(), timeLeft: 30, timerInt: null };
+
+function initGame() {
+    let deck = [];
+    for(let v in POWER) {
+        let count = v==='S'||v==='B' ? 1 : 4;
+        for(let i=0; i<count; i++) deck.push({v, p:POWER[v], s:['♠','♥','♣','♦'][i]||'*', c:(i===1||i===3||v==='B')?'red':'black'});
+    }
+    // 特殊：减少炸弹概率（打乱发牌防止连续同点数）
+    deck.sort(() => Math.random() - 0.5);
+    G.hands = [deck.slice(0, 27).sort((a,b)=>b.p-a.p), deck.slice(27, 54).sort((a,b)=>b.p-a.p)];
+    G.last = null; G.turn = 0; G.selected.clear();
+    renderAll(); resetTimer();
+}
+
+function getInfo(cards) {
+    if(!cards.length) return null;
+    let counts = {}; cards.forEach(c => counts[c.p] = (counts[c.p] || 0) + 1);
+    let v = Object.entries(counts).map(e=>({p:Number(e[0]), c:e[1]})).sort((a,b)=>b.c-a.c || a.p-b.p);
+    let len = cards.length, m = v[0];
+    // 炸弹
+    if(m.c === 4 && len === 4) return { type: 'bomb', p: m.p, len: 4, w: 800+m.p };
+    if(len === 2 && cards[0].p >= 16 && cards[1].p >= 16) return { type: 'bomb', p: 99, len: 2, w: 1000 };
+    // 基础
+    if(len === 1) return { type: 'single', p: m.p, len: 1 };
+    if(len === 2 && m.c === 2) return { type: 'pair', p: m.p, len: 2 };
+    if(len === 3 && m.c === 3) return { type: 'trio', p: m.p, len: 3 };
+    if(len === 4 && m.c === 3) return { type: 'trio_1', p: m.p, len: 4 };
+    if(len === 5 && m.c === 3 && v[1].c === 2) return { type: 'trio_2', p: m.p, len: 5 };
+    // 顺子/连对/飞机
+    let ps = v.map(x => x.p).sort((a,b)=>a-b);
+    let isC = ps[ps.length-1] < 15 && ps[ps.length-1]-ps[0] === ps.length-1;
+    if(len >= 5 && v.every(x => x.c === 1) && isC) return { type: 'straight', p: ps[0], len };
+    if(len >= 6 && len%2===0 && v.every(x => x.c === 2) && isC) return { type: 'dou_str', p: ps[0], len };
+    if(len >= 6 && len%3===0 && v.every(x => x.c === 3) && isC) return { type: 'plane', p: ps[0], len };
+    // 四带二
+    if(len === 6 && m.c === 4) return { type: 'four_2', p: m.p, len: 6 };
+    return null;
+}
+
+/** 强化AI逻辑 **/
+function aiPlay() {
+    const lvl = parseInt(document.getElementById('diff-lvl').value);
+    const hand = G.hands[1]; let toPlay = [];
+    if(!G.last || G.last.player === 1) {
+        toPlay = aiBestLead(hand, lvl);
+    } else {
+        toPlay = aiBestResp(hand, getInfo(G.last.cards), lvl);
+    }
+    if(toPlay.length) execute(toPlay); else handlePass();
+}
+
+function aiBestLead(hand, lvl) {
+    if(lvl === 1) return [hand[hand.length-1]]; // 小白：最小单张
+    // 搜索顺子/飞机
+    for(let l=12; l>=5; l--) {
+        let u = [...new Set(hand.map(c=>c.p))].filter(p=>p<15).sort((a,b)=>a-b);
+        for(let i=0; i<=u.length-l; i++){
+            let sub = u.slice(i, i+l);
+            if(sub[l-1]-sub[0] === l-1) return sub.map(p=>hand.find(c=>c.p===p));
+        }
+    }
+    // 搜索三带/对子
+    let counts = {}; hand.forEach(c=>counts[c.p]=(counts[c.p]||0)+1);
+    for(let p in counts) if(counts[p]>=3) return hand.filter(c=>c.p==p).slice(0,3);
+    for(let p in counts) if(counts[p]>=2) return hand.filter(c=>c.p==p).slice(0,2);
+    return [hand[hand.length-1]];
+}
+
+function aiBestResp(hand, l, lvl) {
+    let matches = [];
+    for(let n=1; n<=15; n++){
+        for(let i=0; i<=hand.length-n; i++){
+            let sub = hand.slice(i, i+n); let info = getInfo(sub);
+            if(info && (info.type===l.type || info.type==='bomb') && (info.len===l.len || info.type==='bomb')){
+                if(info.type==='bomb' && l.type!=='bomb') matches.push(sub);
+                else if(info.p > l.p) matches.push(sub);
+            }
+        }
+    }
+    if(!matches.length) return [];
+    matches.sort((a,b)=>getInfo(a).p - getInfo(b).p);
+    // 高级AI：如果对方牌多，不舍得用大牌
+    if(lvl >= 3 && getInfo(matches[0]).p >= 15 && G.hands[0].length > 8) return [];
+    return matches[0];
+}
+
+function execute(cards) {
+    let info = getInfo(cards);
+    G.hands[G.turn] = G.hands[G.turn].filter(c => !cards.includes(c));
+    G.last = { player: G.turn, cards };
+    if(info.type === 'bomb') { sfx('boom'); document.body.classList.add('quantum-bomb'); setTimeout(()=>document.body.classList.remove('quantum-bomb'), 600); }
+    else sfx('hit');
+    document.getElementById(`desk-${G.turn}`).innerHTML = cards.map(c => `<div class="card ${c.c}" style="margin-left:-45px; transform:scale(0.85); cursor:default"><span class="v">${c.v}</span><span>${c.s}</span></div>`).join('');
+    if(G.hands[G.turn].length === 0) { alert(G.turn===0?"YOU WIN":"CPU WIN"); initGame(); return; }
+    G.selected.clear(); G.turn = 1 - G.turn;
+    document.getElementById(`desk-${G.turn}`).innerHTML = ""; renderAll(); resetTimer();
+    if(G.turn === 1) setTimeout(aiPlay, 1000);
+}
+
+function handlePlay() {
+    let cards = Array.from(G.selected).map(i => G.hands[0][i]);
+    let info = getInfo(cards);
+    if(!info) return;
+    if(G.last && G.last.player !== 0) {
+        let l = getInfo(G.last.cards);
+        if(info.type==='bomb'){ if(l.type==='bomb' && info.w<=l.w) return; }
+        else if(info.type!==l.type || info.len!==l.len || info.p<=l.p) return;
+    }
+    execute(cards);
+}
+
+function handlePass() {
+    if(!G.last || G.last.player === G.turn) return;
+    document.getElementById(`desk-${G.turn}`).innerHTML = "<div style='color:#555'>PASS</div>";
+    G.turn = 1 - G.turn; document.getElementById(`desk-${G.turn}`).innerHTML = "";
+    renderAll(); resetTimer(); if(G.turn === 1) setTimeout(aiPlay, 1000);
+}
+
+function resetTimer() {
+    clearInterval(G.timerInt); G.timeLeft = 30;
+    const el = document.getElementById('timer');
+    G.timerInt = setInterval(() => {
+        G.timeLeft--; el.innerText = G.timeLeft;
+        if(G.timeLeft <= 0) G.turn === 0 ? handlePass() : aiPlay();
+    }, 1000);
+}
+
+function renderAll() {
+    document.getElementById('comp-cnt').innerText = G.hands[1].length;
+    document.getElementById('hand-1').innerHTML = G.hands[1].map(() => `<div class="card back" style="margin-left:-55px"></div>`).join('');
+    const h0 = document.getElementById('hand-0'); h0.innerHTML = "";
+    G.hands[0].forEach((c, i) => {
+        const deg = (Math.random()*6-3).toFixed(1), offY = (Math.random()*10-5).toFixed(1);
+        const div = document.createElement('div');
+        div.className = `card ${c.c} ${G.selected.has(i)?'selected':''}`;
+        div.style.transform = `rotate(${deg}deg)`; div.style.top = `${offY}px`;
+        div.innerHTML = `<span class="v">${c.v}</span><span style="font-size:10px; align-self:flex-end;">${c.s}</span>`;
+        div.onclick = () => { sfx('sel'); G.selected.has(i)?G.selected.delete(i):G.selected.add(i); renderAll(); };
+        h0.appendChild(div);
+    });
+    document.getElementById('ui').className = G.turn === 0 ? 'controls active' : 'controls';
+}
+
+initGame();
+</script>
+</body>
+</html>
