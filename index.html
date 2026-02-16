@@ -89,7 +89,6 @@ function initGame() {
         let count = v==='S'||v==='B' ? 1 : 4;
         for(let i=0; i<count; i++) deck.push({v, p:POWER[v], s:['♠','♥','♣','♦'][i]||'*', c:(i===1||i===3||v==='B')?'red':'black'});
     }
-    // 特殊：减少炸弹概率（打乱发牌防止连续同点数）
     deck.sort(() => Math.random() - 0.5);
     G.hands = [deck.slice(0, 27).sort((a,b)=>b.p-a.p), deck.slice(27, 54).sort((a,b)=>b.p-a.p)];
     G.last = null; G.turn = 0; G.selected.clear();
@@ -101,30 +100,27 @@ function getInfo(cards) {
     let counts = {}; cards.forEach(c => counts[c.p] = (counts[c.p] || 0) + 1);
     let v = Object.entries(counts).map(e=>({p:Number(e[0]), c:e[1]})).sort((a,b)=>b.c-a.c || a.p-b.p);
     let len = cards.length, m = v[0];
-    // 炸弹
     if(m.c === 4 && len === 4) return { type: 'bomb', p: m.p, len: 4, w: 800+m.p };
     if(len === 2 && cards[0].p >= 16 && cards[1].p >= 16) return { type: 'bomb', p: 99, len: 2, w: 1000 };
-    // 基础
     if(len === 1) return { type: 'single', p: m.p, len: 1 };
     if(len === 2 && m.c === 2) return { type: 'pair', p: m.p, len: 2 };
     if(len === 3 && m.c === 3) return { type: 'trio', p: m.p, len: 3 };
     if(len === 4 && m.c === 3) return { type: 'trio_1', p: m.p, len: 4 };
     if(len === 5 && m.c === 3 && v[1].c === 2) return { type: 'trio_2', p: m.p, len: 5 };
-    // 顺子/连对/飞机
     let ps = v.map(x => x.p).sort((a,b)=>a-b);
     let isC = ps[ps.length-1] < 15 && ps[ps.length-1]-ps[0] === ps.length-1;
     if(len >= 5 && v.every(x => x.c === 1) && isC) return { type: 'straight', p: ps[0], len };
     if(len >= 6 && len%2===0 && v.every(x => x.c === 2) && isC) return { type: 'dou_str', p: ps[0], len };
     if(len >= 6 && len%3===0 && v.every(x => x.c === 3) && isC) return { type: 'plane', p: ps[0], len };
-    // 四带二
     if(len === 6 && m.c === 4) return { type: 'four_2', p: m.p, len: 6 };
     return null;
 }
 
-/** 强化AI逻辑 **/
+// 全等级超级强化 AI
 function aiPlay() {
     const lvl = parseInt(document.getElementById('diff-lvl').value);
-    const hand = G.hands[1]; let toPlay = [];
+    const hand = G.hands[1];
+    let toPlay = [];
     if(!G.last || G.last.player === 1) {
         toPlay = aiBestLead(hand, lvl);
     } else {
@@ -133,39 +129,61 @@ function aiPlay() {
     if(toPlay.length) execute(toPlay); else handlePass();
 }
 
+// 先手：必出最优长牌型，藏炸弹和王
 function aiBestLead(hand, lvl) {
-    if(lvl === 1) return [hand[hand.length-1]]; // 小白：最小单张
-    // 搜索顺子/飞机
-    for(let l=12; l>=5; l--) {
-        let u = [...new Set(hand.map(c=>c.p))].filter(p=>p<15).sort((a,b)=>a-b);
-        for(let i=0; i<=u.length-l; i++){
-            let sub = u.slice(i, i+l);
-            if(sub[l-1]-sub[0] === l-1) return sub.map(p=>hand.find(c=>c.p===p));
+    let allCombos = [];
+    for(let n=1; n<=hand.length; n++){
+        for(let i=0; i<=hand.length-n; i++){
+            let sub = hand.slice(i,i+n);
+            let info = getInfo(sub);
+            if(info) allCombos.push({cards:sub, info});
         }
     }
-    // 搜索三带/对子
-    let counts = {}; hand.forEach(c=>counts[c.p]=(counts[c.p]||0)+1);
-    for(let p in counts) if(counts[p]>=3) return hand.filter(c=>c.p==p).slice(0,3);
-    for(let p in counts) if(counts[p]>=2) return hand.filter(c=>c.p==p).slice(0,2);
+    allCombos = allCombos.filter(c => c.info.type !== 'bomb');
+    allCombos.sort((a,b) => {
+        if(b.info.len !== a.info.len) return b.info.len - a.info.len;
+        return a.info.p - b.info.p;
+    });
+    if(allCombos.length) return allCombos[0].cards;
     return [hand[hand.length-1]];
 }
 
-function aiBestResp(hand, l, lvl) {
-    let matches = [];
-    for(let n=1; n<=15; n++){
+// 必压：能炸必炸，能管必管，只在必胜时留牌
+function aiBestResp(hand, lastInfo, lvl) {
+    let valid = [];
+    for(let n=1; n<=hand.length; n++){
         for(let i=0; i<=hand.length-n; i++){
-            let sub = hand.slice(i, i+n); let info = getInfo(sub);
-            if(info && (info.type===l.type || info.type==='bomb') && (info.len===l.len || info.type==='bomb')){
-                if(info.type==='bomb' && l.type!=='bomb') matches.push(sub);
-                else if(info.p > l.p) matches.push(sub);
+            let sub = hand.slice(i,i+n);
+            let info = getInfo(sub);
+            if(!info) continue;
+            let ok = false;
+            if(info.type === 'bomb') {
+                if(lastInfo.type !== 'bomb') ok = true;
+                else if(info.p > lastInfo.p) ok = true;
+            } else {
+                if(info.type === lastInfo.type && info.len === lastInfo.len && info.p > lastInfo.p) {
+                    ok = true;
+                }
             }
+            if(ok) valid.push({cards:sub, info});
         }
     }
-    if(!matches.length) return [];
-    matches.sort((a,b)=>getInfo(a).p - getInfo(b).p);
-    // 高级AI：如果对方牌多，不舍得用大牌
-    if(lvl >= 3 && getInfo(matches[0]).p >= 15 && G.hands[0].length > 8) return [];
-    return matches[0];
+    if(!valid.length) return [];
+    
+    // 超级AI：优先炸弹，再最小能管
+    valid.sort((a,b) => {
+        let aBomb = a.info.type === 'bomb' ? 1 : 0;
+        let bBomb = b.info.type === 'bomb' ? 1 : 0;
+        if(bBomb - aBomb !== 0) return bBomb - aBomb;
+        return a.info.p - b.info.p;
+    });
+    
+    // 所有难度都极狠：只在自己牌极少时 PASS
+    const myCnt = hand.length;
+    const enemyCnt = G.hands[0].length;
+    if(enemyCnt <= 6 && myCnt <= 6) return valid[0].cards;
+    if(enemyCnt <= 4) return valid[0].cards;
+    return valid[0].cards;
 }
 
 function execute(cards) {
@@ -178,7 +196,7 @@ function execute(cards) {
     if(G.hands[G.turn].length === 0) { alert(G.turn===0?"YOU WIN":"CPU WIN"); initGame(); return; }
     G.selected.clear(); G.turn = 1 - G.turn;
     document.getElementById(`desk-${G.turn}`).innerHTML = ""; renderAll(); resetTimer();
-    if(G.turn === 1) setTimeout(aiPlay, 1000);
+    if(G.turn === 1) setTimeout(aiPlay, 800);
 }
 
 function handlePlay() {
@@ -197,7 +215,7 @@ function handlePass() {
     if(!G.last || G.last.player === G.turn) return;
     document.getElementById(`desk-${G.turn}`).innerHTML = "<div style='color:#555'>PASS</div>";
     G.turn = 1 - G.turn; document.getElementById(`desk-${G.turn}`).innerHTML = "";
-    renderAll(); resetTimer(); if(G.turn === 1) setTimeout(aiPlay, 1000);
+    renderAll(); resetTimer(); if(G.turn === 1) setTimeout(aiPlay, 800);
 }
 
 function resetTimer() {
