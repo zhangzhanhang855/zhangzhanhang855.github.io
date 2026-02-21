@@ -2,248 +2,338 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>PIXEL POKER BY JACK</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小丑牌 Balatro (Web Prototype)</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-        :root { --bg: #08080c; --gold: #ffcc00; --red: #ff3e3e; --white: #ececec; }
-        body { margin: 0; background: var(--bg); font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; transition: 0.1s; }
-
-        /* 超进化震动与崩坏 */
-        @keyframes quantum-break {
-            0% { transform: translate(0); filter: hue-rotate(0deg) contrast(1); }
-            10% { transform: translate(-10px, 5px); filter: hue-rotate(90deg) contrast(5); }
-            20% { transform: translate(10px, -5px) scale(1.1); filter: invert(1); }
-            40% { transform: translate(-5px, 10px); filter: saturate(10); }
-            100% { transform: translate(0); filter: none; }
+        body {
+            background-color: #2b5b3f; /* 经典的扑克桌绿色 */
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        .quantum-bomb { animation: quantum-break 0.6s steps(6) forwards; }
 
-        #stage { height: 100vh; display: flex; flex-direction: column; padding: 25px; box-sizing: border-box; }
-        #ui-top { display: flex; justify-content: space-between; align-items: center; padding: 15px; border: 4px solid var(--white); background: #12121e; }
-        
-        .hand-area { display: flex; justify-content: center; align-items: center; min-height: 150px; position: relative; }
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 800px;
+            background: rgba(0,0,0,0.5);
+            padding: 10px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .stat-box { font-size: 1.2em; font-weight: bold; }
+        .score-display { color: #f1c40f; font-size: 1.5em; }
+
+        #play-area {
+            height: 150px;
+            width: 100%;
+            max-width: 800px;
+            border: 2px dashed #4ca86e;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2em;
+            color: #ccc;
+        }
+
+        #hand {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+            min-height: 140px;
+        }
+
         .card {
-            width: 75px; height: 105px; background: var(--white); color: #000; border: 4px solid #000;
-            margin-left: -40px; display: flex; flex-direction: column; padding: 6px; box-sizing: border-box;
-            cursor: pointer; position: relative; transition: top 0.2s, transform 0.1s;
+            width: 90px;
+            height: 130px;
+            background: white;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
         }
-        .card.selected { transform: translateY(-45px) !important; border-color: var(--gold); z-index: 100 !important; }
-        .card.back { background: #2a4494; border-color: #fff; }
-        .card.red { color: var(--red); }
-        .card .v { font-size: 14px; line-height: 1; }
 
-        #desk { flex: 1; margin: 15px 0; border: 4px solid #222; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0,0,0,0.4); }
-        .controls { display: flex; justify-content: center; gap: 15px; height: 60px; visibility: hidden; }
-        .controls.active { visibility: visible; }
+        .card.red { color: #e74c3c; }
+        .card.black { color: #2c3e50; }
 
-        button { padding: 10px 20px; background: #fff; border: 4px solid #000; font-family: inherit; font-size: 8px; cursor: pointer; box-shadow: 4px 4px 0px var(--gold); }
-        button:active { transform: translate(2px, 2px); box-shadow: none; }
-        select { background: #000; color: var(--gold); border: 2px solid #fff; font-family: inherit; font-size: 8px; padding: 5px; }
+        .card.selected {
+            transform: translateY(-20px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5), 0 0 10px #f1c40f;
+            border: 2px solid #f1c40f;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            font-size: 1.2em;
+            margin: 0 10px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        #play-btn { background-color: #3498db; color: white; }
+        #play-btn:hover { background-color: #2980b9; }
+        
+        #discard-btn { background-color: #e74c3c; color: white; }
+        #discard-btn:hover { background-color: #c0392b; }
+
+        .controls button:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+        }
+
+        #message {
+            margin-top: 15px;
+            font-size: 1.2em;
+            height: 30px;
+            color: #f1c40f;
+        }
     </style>
 </head>
 <body>
 
-<div id="stage">
-    <div id="ui-top">
-        <div>CPU:<span id="comp-cnt">0</span></div>
-        <div>
-            <select id="diff-lvl">
-                <option value="1">咸鱼 (EASY)</option>
-                <option value="2" selected>普通 (NORMAL)</option>
-                <option value="3">老手 (HARD)</option>
-                <option value="4">天网 (SKYNET)</option>
-            </select>
-        </div>
-        <div id="timer" style="color:var(--gold)">30</div>
-        <button onclick="initGame()">RESET</button>
+    <div id="top-bar">
+        <div class="stat-box">目标分数: <span id="target-score">300</span></div>
+        <div class="stat-box score-display">总分数: <span id="total-score">0</span></div>
+        <div class="stat-box">出牌: <span id="plays-left">4</span> | 弃牌: <span id="discards-left">3</span></div>
     </div>
 
-    <div id="hand-1" class="hand-area"></div>
-    <div id="desk">
-        <div id="desk-1" class="hand-area"></div>
-        <div id="desk-0" class="hand-area"></div>
+    <div id="play-area">
+        上次出牌: <span id="last-play-info">暂无</span>
     </div>
-    <div class="controls" id="ui">
-        <button onclick="handlePlay()">EXECUTE</button>
-        <button onclick="handlePass()" id="btn-pass">PASS</button>
+
+    <div id="hand"></div>
+
+    <div class="controls">
+        <button id="play-btn" onclick="playCards()">出牌 (0/5)</button>
+        <button id="discard-btn" onclick="discardCards()">弃牌 (0/5)</button>
     </div>
-    <div id="hand-0" class="hand-area"></div>
-</div>
+
+    <div id="message"></div>
 
 <script>
-/** 音效与逻辑核心 **/
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-function sfx(t){
-    const o=audioCtx.createOscillator(), g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); const n=audioCtx.currentTime;
-    if(t==='sel'){ o.type='square'; o.frequency.setValueAtTime(800,n); g.gain.setValueAtTime(0.05,n); o.start(); o.stop(n+0.05); }
-    else if(t==='hit'){ o.type='triangle'; o.frequency.setValueAtTime(300,n); o.frequency.exponentialRampToValueAtTime(50,n+0.2); g.gain.setValueAtTime(0.2,n); o.start(); o.stop(n+0.2); }
-    else if(t==='boom'){ o.type='sawtooth'; o.frequency.setValueAtTime(120,n); o.frequency.linearRampToValueAtTime(20,n+0.6); g.gain.setValueAtTime(0.4,n); g.gain.linearRampToValueAtTime(0,n+0.6); o.start(); o.stop(n+0.6); }
-}
+    // 游戏核心数据
+    const suits = ['♠', '♥', '♣', '♦'];
+    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+    
+    // 基础牌型数据 (筹码, 倍率)
+    const handTypes = {
+        '四条': { chips: 150, mult: 7 },
+        '同花': { chips: 80, mult: 4 },
+        '三条': { chips: 40, mult: 3 },
+        '两对': { chips: 30, mult: 2 },
+        '一对': { chips: 20, mult: 2 },
+        '高牌': { chips: 10, mult: 1 }
+    };
 
-const POWER = { '3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'10':10,'J':11,'Q':12,'K':13,'A':14,'2':15,'S':16,'B':17 };
-let G = { hands: [[], []], last: null, turn: 0, selected: new Set(), timeLeft: 30, timerInt: null };
-
-function initGame() {
     let deck = [];
-    for(let v in POWER) {
-        let count = v==='S'||v==='B' ? 1 : 4;
-        for(let i=0; i<count; i++) deck.push({v, p:POWER[v], s:['♠','♥','♣','♦'][i]||'*', c:(i===1||i===3||v==='B')?'red':'black'});
-    }
-    deck.sort(() => Math.random() - 0.5);
-    G.hands = [deck.slice(0, 27).sort((a,b)=>b.p-a.p), deck.slice(27, 54).sort((a,b)=>b.p-a.p)];
-    G.last = null; G.turn = 0; G.selected.clear();
-    renderAll(); resetTimer();
-}
+    let hand = [];
+    let selectedCards = [];
+    
+    // 关卡状态
+    let state = {
+        targetScore: 300,
+        totalScore: 0,
+        playsLeft: 4,
+        discardsLeft: 3
+    };
 
-function getInfo(cards) {
-    if(!cards.length) return null;
-    let counts = {}; cards.forEach(c => counts[c.p] = (counts[c.p] || 0) + 1);
-    let v = Object.entries(counts).map(e=>({p:Number(e[0]), c:e[1]})).sort((a,b)=>b.c-a.c || a.p-b.p);
-    let len = cards.length, m = v[0];
-    if(m.c === 4 && len === 4) return { type: 'bomb', p: m.p, len: 4, w: 800+m.p };
-    if(len === 2 && cards[0].p >= 16 && cards[1].p >= 16) return { type: 'bomb', p: 99, len: 2, w: 1000 };
-    if(len === 1) return { type: 'single', p: m.p, len: 1 };
-    if(len === 2 && m.c === 2) return { type: 'pair', p: m.p, len: 2 };
-    if(len === 3 && m.c === 3) return { type: 'trio', p: m.p, len: 3 };
-    if(len === 4 && m.c === 3) return { type: 'trio_1', p: m.p, len: 4 };
-    if(len === 5 && m.c === 3 && v[1].c === 2) return { type: 'trio_2', p: m.p, len: 5 };
-    let ps = v.map(x => x.p).sort((a,b)=>a-b);
-    let isC = ps[ps.length-1] < 15 && ps[ps.length-1]-ps[0] === ps.length-1;
-    if(len >= 5 && v.every(x => x.c === 1) && isC) return { type: 'straight', p: ps[0], len };
-    if(len >= 6 && len%2===0 && v.every(x => x.c === 2) && isC) return { type: 'dou_str', p: ps[0], len };
-    if(len >= 6 && len%3===0 && v.every(x => x.c === 3) && isC) return { type: 'plane', p: ps[0], len };
-    if(len === 6 && m.c === 4) return { type: 'four_2', p: m.p, len: 6 };
-    return null;
-}
-
-// 全等级超级强化 AI
-function aiPlay() {
-    const lvl = parseInt(document.getElementById('diff-lvl').value);
-    const hand = G.hands[1];
-    let toPlay = [];
-    if(!G.last || G.last.player === 1) {
-        toPlay = aiBestLead(hand, lvl);
-    } else {
-        toPlay = aiBestResp(hand, getInfo(G.last.cards), lvl);
-    }
-    if(toPlay.length) execute(toPlay); else handlePass();
-}
-
-// 先手：必出最优长牌型，藏炸弹和王
-function aiBestLead(hand, lvl) {
-    let allCombos = [];
-    for(let n=1; n<=hand.length; n++){
-        for(let i=0; i<=hand.length-n; i++){
-            let sub = hand.slice(i,i+n);
-            let info = getInfo(sub);
-            if(info) allCombos.push({cards:sub, info});
-        }
-    }
-    allCombos = allCombos.filter(c => c.info.type !== 'bomb');
-    allCombos.sort((a,b) => {
-        if(b.info.len !== a.info.len) return b.info.len - a.info.len;
-        return a.info.p - b.info.p;
-    });
-    if(allCombos.length) return allCombos[0].cards;
-    return [hand[hand.length-1]];
-}
-
-// 必压：能炸必炸，能管必管，只在必胜时留牌
-function aiBestResp(hand, lastInfo, lvl) {
-    let valid = [];
-    for(let n=1; n<=hand.length; n++){
-        for(let i=0; i<=hand.length-n; i++){
-            let sub = hand.slice(i,i+n);
-            let info = getInfo(sub);
-            if(!info) continue;
-            let ok = false;
-            if(info.type === 'bomb') {
-                if(lastInfo.type !== 'bomb') ok = true;
-                else if(info.p > lastInfo.p) ok = true;
-            } else {
-                if(info.type === lastInfo.type && info.len === lastInfo.len && info.p > lastInfo.p) {
-                    ok = true;
-                }
+    // 初始化牌库
+    function initDeck() {
+        deck = [];
+        for (let suit of suits) {
+            for (let rank of ranks) {
+                let value = parseInt(rank);
+                if (['J', 'Q', 'K'].includes(rank)) value = 10;
+                if (rank === 'A') value = 11;
+                deck.push({ suit, rank, value, id: `${suit}${rank}` });
             }
-            if(ok) valid.push({cards:sub, info});
+        }
+        // 洗牌算法
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j], deck[i]];
         }
     }
-    if(!valid.length) return [];
-    
-    // 超级AI：优先炸弹，再最小能管
-    valid.sort((a,b) => {
-        let aBomb = a.info.type === 'bomb' ? 1 : 0;
-        let bBomb = b.info.type === 'bomb' ? 1 : 0;
-        if(bBomb - aBomb !== 0) return bBomb - aBomb;
-        return a.info.p - b.info.p;
-    });
-    
-    // 所有难度都极狠：只在自己牌极少时 PASS
-    const myCnt = hand.length;
-    const enemyCnt = G.hands[0].length;
-    if(enemyCnt <= 6 && myCnt <= 6) return valid[0].cards;
-    if(enemyCnt <= 4) return valid[0].cards;
-    return valid[0].cards;
-}
 
-function execute(cards) {
-    let info = getInfo(cards);
-    G.hands[G.turn] = G.hands[G.turn].filter(c => !cards.includes(c));
-    G.last = { player: G.turn, cards };
-    if(info.type === 'bomb') { sfx('boom'); document.body.classList.add('quantum-bomb'); setTimeout(()=>document.body.classList.remove('quantum-bomb'), 600); }
-    else sfx('hit');
-    document.getElementById(`desk-${G.turn}`).innerHTML = cards.map(c => `<div class="card ${c.c}" style="margin-left:-45px; transform:scale(0.85); cursor:default"><span class="v">${c.v}</span><span>${c.s}</span></div>`).join('');
-    if(G.hands[G.turn].length === 0) { alert(G.turn===0?"YOU WIN":"CPU WIN"); initGame(); return; }
-    G.selected.clear(); G.turn = 1 - G.turn;
-    document.getElementById(`desk-${G.turn}`).innerHTML = ""; renderAll(); resetTimer();
-    if(G.turn === 1) setTimeout(aiPlay, 800);
-}
-
-function handlePlay() {
-    let cards = Array.from(G.selected).map(i => G.hands[0][i]);
-    let info = getInfo(cards);
-    if(!info) return;
-    if(G.last && G.last.player !== 0) {
-        let l = getInfo(G.last.cards);
-        if(info.type==='bomb'){ if(l.type==='bomb' && info.w<=l.w) return; }
-        else if(info.type!==l.type || info.len!==l.len || info.p<=l.p) return;
+    // 抽牌直到手牌满8张
+    function drawCards() {
+        while (hand.length < 8 && deck.length > 0) {
+            hand.push(deck.pop());
+        }
+        renderHand();
     }
-    execute(cards);
-}
 
-function handlePass() {
-    if(!G.last || G.last.player === G.turn) return;
-    document.getElementById(`desk-${G.turn}`).innerHTML = "<div style='color:#555'>PASS</div>";
-    G.turn = 1 - G.turn; document.getElementById(`desk-${G.turn}`).innerHTML = "";
-    renderAll(); resetTimer(); if(G.turn === 1) setTimeout(aiPlay, 800);
-}
+    // 渲染手牌
+    function renderHand() {
+        const handDiv = document.getElementById('hand');
+        handDiv.innerHTML = '';
+        selectedCards = [];
+        updateButtons();
 
-function resetTimer() {
-    clearInterval(G.timerInt); G.timeLeft = 30;
-    const el = document.getElementById('timer');
-    G.timerInt = setInterval(() => {
-        G.timeLeft--; el.innerText = G.timeLeft;
-        if(G.timeLeft <= 0) G.turn === 0 ? handlePass() : aiPlay();
-    }, 1000);
-}
+        hand.forEach((card, index) => {
+            const cardElement = document.createElement('div');
+            cardElement.className = `card ${['♥', '♦'].includes(card.suit) ? 'red' : 'black'}`;
+            cardElement.innerHTML = `${card.suit}<br>${card.rank}`;
+            
+            cardElement.onclick = () => toggleSelectCard(cardElement, card, index);
+            handDiv.appendChild(cardElement);
+        });
+    }
 
-function renderAll() {
-    document.getElementById('comp-cnt').innerText = G.hands[1].length;
-    document.getElementById('hand-1').innerHTML = G.hands[1].map(() => `<div class="card back" style="margin-left:-55px"></div>`).join('');
-    const h0 = document.getElementById('hand-0'); h0.innerHTML = "";
-    G.hands[0].forEach((c, i) => {
-        const deg = (Math.random()*6-3).toFixed(1), offY = (Math.random()*10-5).toFixed(1);
-        const div = document.createElement('div');
-        div.className = `card ${c.c} ${G.selected.has(i)?'selected':''}`;
-        div.style.transform = `rotate(${deg}deg)`; div.style.top = `${offY}px`;
-        div.innerHTML = `<span class="v">${c.v}</span><span style="font-size:10px; align-self:flex-end;">${c.s}</span>`;
-        div.onclick = () => { sfx('sel'); G.selected.has(i)?G.selected.delete(i):G.selected.add(i); renderAll(); };
-        h0.appendChild(div);
-    });
-    document.getElementById('ui').className = G.turn === 0 ? 'controls active' : 'controls';
-}
+    // 点击选择/取消选择卡牌
+    function toggleSelectCard(element, card, index) {
+        const selectedIndex = selectedCards.findIndex(c => c.index === index);
+        
+        if (selectedIndex > -1) {
+            selectedCards.splice(selectedIndex, 1);
+            element.classList.remove('selected');
+        } else {
+            if (selectedCards.length < 5) {
+                selectedCards.push({ card, index, element });
+                element.classList.add('selected');
+            }
+        }
+        updateButtons();
+    }
 
-initGame();
+    // 更新按钮状态
+    function updateButtons() {
+        const count = selectedCards.length;
+        document.getElementById('play-btn').innerText = `出牌 (${count}/5)`;
+        document.getElementById('discard-btn').innerText = `弃牌 (${count}/5)`;
+        
+        document.getElementById('play-btn').disabled = count === 0 || state.playsLeft <= 0;
+        document.getElementById('discard-btn').disabled = count === 0 || state.discardsLeft <= 0;
+    }
+
+    // 牌型判定 (基础版)
+    function evaluateHand(cards) {
+        if (cards.length === 0) return null;
+        
+        const rankCounts = {};
+        const suitCounts = {};
+        cards.forEach(c => {
+            rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1;
+            suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1;
+        });
+
+        const counts = Object.values(rankCounts).sort((a, b) => b - a);
+        const isFlush = Object.values(suitCounts).some(count => count === 5); // 必须5张同花色
+        
+        let handName = '高牌';
+        if (counts[0] === 4) handName = '四条';
+        else if (isFlush) handName = '同花';
+        else if (counts[0] === 3) handName = '三条';
+        else if (counts[0] === 2 && counts[1] === 2) handName = '两对';
+        else if (counts[0] === 2) handName = '一对';
+
+        // 计算基础筹码 (牌型基础 + 卡牌点数)
+        let cardChips = cards.reduce((sum, c) => sum + c.value, 0);
+        let baseChips = handTypes[handName].chips + cardChips;
+        let mult = handTypes[handName].mult;
+
+        return { name: handName, chips: baseChips, mult: mult, total: baseChips * mult };
+    }
+
+    // 出牌逻辑
+    function playCards() {
+        if (selectedCards.length === 0 || state.playsLeft <= 0) return;
+
+        const playedCards = selectedCards.map(s => s.card);
+        const evaluation = evaluateHand(playedCards);
+
+        // 动画提示与记分
+        state.playsLeft--;
+        state.totalScore += evaluation.total;
+        
+        document.getElementById('last-play-info').innerHTML = 
+            `牌型: <b>${evaluation.name}</b><br>筹码: <span style="color:#3498db">${evaluation.chips}</span> X 倍率: <span style="color:#e74c3c">${evaluation.mult}</span> = <b>${evaluation.total}</b> 分`;
+        
+        showMessage(`打出 ${evaluation.name}！获得 ${evaluation.total} 分！`);
+
+        removeSelectedAndRedraw();
+        checkGameState();
+    }
+
+    // 弃牌逻辑
+    function discardCards() {
+        if (selectedCards.length === 0 || state.discardsLeft <= 0) return;
+        
+        state.discardsLeft--;
+        showMessage(`弃掉了 ${selectedCards.length} 张牌。`);
+        removeSelectedAndRedraw();
+        updateUI();
+    }
+
+    // 移除选中牌并重新抽牌
+    function removeSelectedAndRedraw() {
+        // 从后往前删，避免索引偏移
+        selectedCards.sort((a, b) => b.index - a.index).forEach(s => {
+            hand.splice(s.index, 1);
+        });
+        selectedCards = [];
+        drawCards();
+        updateUI();
+    }
+
+    // 更新界面状态
+    function updateUI() {
+        document.getElementById('total-score').innerText = state.totalScore;
+        document.getElementById('plays-left').innerText = state.playsLeft;
+        document.getElementById('discards-left').innerText = state.discardsLeft;
+    }
+
+    function showMessage(msg) {
+        const msgDiv = document.getElementById('message');
+        msgDiv.innerText = msg;
+        setTimeout(() => msgDiv.innerText = '', 3000);
+    }
+
+    // 检查输赢状态
+    function checkGameState() {
+        updateUI();
+        if (state.totalScore >= state.targetScore) {
+            alert("🎉 恭喜！盲注达标，你赢了！");
+            resetGame();
+        } else if (state.playsLeft <= 0) {
+            alert("💀 出牌次数耗尽，分数未达标，游戏结束。");
+            resetGame();
+        }
+    }
+
+    function resetGame() {
+        state = { targetScore: 300, totalScore: 0, playsLeft: 4, discardsLeft: 3 };
+        initDeck();
+        hand = [];
+        drawCards();
+        updateUI();
+        document.getElementById('last-play-info').innerText = '暂无';
+    }
+
+    // 游戏初始化启动
+    resetGame();
 </script>
+
 </body>
 </html>
