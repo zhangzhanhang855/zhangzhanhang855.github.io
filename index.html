@@ -1,339 +1,109 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小丑牌 Balatro (Web Prototype)</title>
+    <title>Royal Deck | 旗艦系列 - 極致工藝與收藏級撲克牌</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body {
-            background-color: #2b5b3f; /* 经典的扑克桌绿色 */
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        :root {
+            --gold: #d4af37;
+            --dark-bg: #0a0a0a;
+            --white: #ffffff;
         }
 
-        #top-bar {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            max-width: 800px;
-            background: rgba(0,0,0,0.5);
-            padding: 10px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-        }
+        /* 原始網頁樣式縮減版（保持你的頁面美觀） */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'serif'; }
+        body { background-color: var(--dark-bg); color: var(--white); overflow-x: hidden; }
+        .top-bar { background: var(--gold); color: #000; text-align: center; padding: 8px; font-size: 12px; cursor: pointer; }
+        nav { display: flex; justify-content: space-between; padding: 20px 5%; background: rgba(0,0,0,0.9); border-bottom: 1px solid var(--gold); }
+        .product-container { padding: 60px 5%; text-align: center; }
+        .btn { padding: 18px 40px; border: none; font-weight: bold; cursor: pointer; background: var(--gold); color: #000; }
 
-        .stat-box { font-size: 1.2em; font-weight: bold; }
-        .score-display { color: #f1c40f; font-size: 1.5em; }
-
-        #play-area {
-            height: 150px;
-            width: 100%;
-            max-width: 800px;
-            border: 2px dashed #4ca86e;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.2em;
-            color: #ccc;
-        }
-
-        #hand {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin-bottom: 20px;
-            min-height: 140px;
-        }
-
-        .card {
-            width: 90px;
-            height: 130px;
-            background: white;
-            border-radius: 8px;
+        /* --- 惡作劇全螢幕文字層 --- */
+        #troll-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 99999;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            font-size: 1.5em;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-            user-select: none;
+            opacity: 0;
+            transition: opacity 0.5s;
         }
 
-        .card.red { color: #e74c3c; }
-        .card.black { color: #2c3e50; }
-
-        .card.selected {
-            transform: translateY(-20px);
-            box-shadow: 0 8px 16px rgba(0,0,0,0.5), 0 0 10px #f1c40f;
-            border: 2px solid #f1c40f;
+        #troll-overlay h1 {
+            color: #ff0000;
+            font-size: 8vw;
+            text-transform: uppercase;
+            letter-spacing: 10px;
+            animation: shake 0.1s infinite;
         }
 
-        .controls button {
-            padding: 10px 20px;
-            font-size: 1.2em;
-            margin: 0 10px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            font-weight: bold;
-            transition: background 0.2s;
-        }
-
-        #play-btn { background-color: #3498db; color: white; }
-        #play-btn:hover { background-color: #2980b9; }
-        
-        #discard-btn { background-color: #e74c3c; color: white; }
-        #discard-btn:hover { background-color: #c0392b; }
-
-        .controls button:disabled {
-            background-color: #7f8c8d;
-            cursor: not-allowed;
-        }
-
-        #message {
-            margin-top: 15px;
-            font-size: 1.2em;
-            height: 30px;
-            color: #f1c40f;
+        @keyframes shake {
+            0% { transform: translate(2px, 1px) rotate(0deg); }
+            50% { transform: translate(-1px, -2px) rotate(-1deg); }
+            100% { transform: translate(1px, 2px) rotate(0deg); }
         }
     </style>
 </head>
 <body>
 
-    <div id="top-bar">
-        <div class="stat-box">目标分数: <span id="target-score">300</span></div>
-        <div class="stat-box score-display">总分数: <span id="total-score">0</span></div>
-        <div class="stat-box">出牌: <span id="plays-left">4</span> | 弃牌: <span id="discards-left">3</span></div>
+    <audio id="troll-audio" loop>
+        <source src="https://raw.githubusercontent.com/zhangzhanhang855/zhangzhanhang855.vercel.app/main/Rick%20Astley%20-%20Never%20Gonna%20Give%20You%20Up%20(Official%20Video)%20(4K%20Remaster)%205.mp4" type="audio/mpeg">
+        </audio>
+
+    <div id="troll-overlay" style="display: none;">
+        <h1>你被騙了</h1>
+        <p style="color: #555; margin-top: 20px;">音量已調至最大...</p>
     </div>
 
-    <div id="play-area">
-        上次出牌: <span id="last-play-info">暂无</span>
+    <div class="top-bar rick-trigger">全球免運費 | 訂單滿 NT$3,000 即贈限量版金箔牌一張 [立即領取]</div>
+    <nav>
+        <div class="logo rick-trigger">ROYAL DECK</div>
+    </nav>
+    <div class="product-container">
+        <h1 style="margin-bottom: 20px;">黑金傳奇：大馬士革紋典藏撲克牌</h1>
+        <button class="btn rick-trigger">立即加入購物車</button>
     </div>
 
-    <div id="hand"></div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const overlay = document.getElementById('troll-overlay');
+            const audio = document.getElementById('troll-audio');
+            const triggers = document.querySelectorAll('.rick-trigger');
 
-    <div class="controls">
-        <button id="play-btn" onclick="playCards()">出牌 (0/5)</button>
-        <button id="discard-btn" onclick="discardCards()">弃牌 (0/5)</button>
-    </div>
+            function launchTroll() {
+                // 1. 顯示惡作劇文字層
+                overlay.style.display = 'flex';
+                setTimeout(() => overlay.style.opacity = '1', 10);
 
-    <div id="message"></div>
+                // 2. 嘗試進入全螢幕（增加用戶恐慌感）
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                }
 
-<script>
-    // 游戏核心数据
-    const suits = ['♠', '♥', '♣', '♦'];
-    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-    
-    // 基础牌型数据 (筹码, 倍率)
-    const handTypes = {
-        '四条': { chips: 150, mult: 7 },
-        '同花': { chips: 80, mult: 4 },
-        '三条': { chips: 40, mult: 3 },
-        '两对': { chips: 30, mult: 2 },
-        '一对': { chips: 20, mult: 2 },
-        '高牌': { chips: 10, mult: 1 }
-    };
+                // 3. 播放音頻
+                audio.play();
 
-    let deck = [];
-    let hand = [];
-    let selectedCards = [];
-    
-    // 关卡状态
-    let state = {
-        targetScore: 300,
-        totalScore: 0,
-        playsLeft: 4,
-        discardsLeft: 3
-    };
-
-    // 初始化牌库
-    function initDeck() {
-        deck = [];
-        for (let suit of suits) {
-            for (let rank of ranks) {
-                let value = parseInt(rank);
-                if (['J', 'Q', 'K'].includes(rank)) value = 10;
-                if (rank === 'A') value = 11;
-                deck.push({ suit, rank, value, id: `${suit}${rank}` });
+                // 4. 惡作劇：防止右鍵，讓用戶更難退出
+                document.addEventListener('contextmenu', e => e.preventDefault());
             }
-        }
-        // 洗牌算法
-        for (let i = deck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [deck[i], deck[j]] = [deck[j], deck[i]];
-        }
-    }
 
-    // 抽牌直到手牌满8张
-    function drawCards() {
-        while (hand.length < 8 && deck.length > 0) {
-            hand.push(deck.pop());
-        }
-        renderHand();
-    }
-
-    // 渲染手牌
-    function renderHand() {
-        const handDiv = document.getElementById('hand');
-        handDiv.innerHTML = '';
-        selectedCards = [];
-        updateButtons();
-
-        hand.forEach((card, index) => {
-            const cardElement = document.createElement('div');
-            cardElement.className = `card ${['♥', '♦'].includes(card.suit) ? 'red' : 'black'}`;
-            cardElement.innerHTML = `${card.suit}<br>${card.rank}`;
-            
-            cardElement.onclick = () => toggleSelectCard(cardElement, card, index);
-            handDiv.appendChild(cardElement);
+            // 綁定所有帶有 rick-trigger 的元素
+            triggers.forEach(el => {
+                el.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    launchTroll();
+                });
+            });
         });
-    }
-
-    // 点击选择/取消选择卡牌
-    function toggleSelectCard(element, card, index) {
-        const selectedIndex = selectedCards.findIndex(c => c.index === index);
-        
-        if (selectedIndex > -1) {
-            selectedCards.splice(selectedIndex, 1);
-            element.classList.remove('selected');
-        } else {
-            if (selectedCards.length < 5) {
-                selectedCards.push({ card, index, element });
-                element.classList.add('selected');
-            }
-        }
-        updateButtons();
-    }
-
-    // 更新按钮状态
-    function updateButtons() {
-        const count = selectedCards.length;
-        document.getElementById('play-btn').innerText = `出牌 (${count}/5)`;
-        document.getElementById('discard-btn').innerText = `弃牌 (${count}/5)`;
-        
-        document.getElementById('play-btn').disabled = count === 0 || state.playsLeft <= 0;
-        document.getElementById('discard-btn').disabled = count === 0 || state.discardsLeft <= 0;
-    }
-
-    // 牌型判定 (基础版)
-    function evaluateHand(cards) {
-        if (cards.length === 0) return null;
-        
-        const rankCounts = {};
-        const suitCounts = {};
-        cards.forEach(c => {
-            rankCounts[c.rank] = (rankCounts[c.rank] || 0) + 1;
-            suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1;
-        });
-
-        const counts = Object.values(rankCounts).sort((a, b) => b - a);
-        const isFlush = Object.values(suitCounts).some(count => count === 5); // 必须5张同花色
-        
-        let handName = '高牌';
-        if (counts[0] === 4) handName = '四条';
-        else if (isFlush) handName = '同花';
-        else if (counts[0] === 3) handName = '三条';
-        else if (counts[0] === 2 && counts[1] === 2) handName = '两对';
-        else if (counts[0] === 2) handName = '一对';
-
-        // 计算基础筹码 (牌型基础 + 卡牌点数)
-        let cardChips = cards.reduce((sum, c) => sum + c.value, 0);
-        let baseChips = handTypes[handName].chips + cardChips;
-        let mult = handTypes[handName].mult;
-
-        return { name: handName, chips: baseChips, mult: mult, total: baseChips * mult };
-    }
-
-    // 出牌逻辑
-    function playCards() {
-        if (selectedCards.length === 0 || state.playsLeft <= 0) return;
-
-        const playedCards = selectedCards.map(s => s.card);
-        const evaluation = evaluateHand(playedCards);
-
-        // 动画提示与记分
-        state.playsLeft--;
-        state.totalScore += evaluation.total;
-        
-        document.getElementById('last-play-info').innerHTML = 
-            `牌型: <b>${evaluation.name}</b><br>筹码: <span style="color:#3498db">${evaluation.chips}</span> X 倍率: <span style="color:#e74c3c">${evaluation.mult}</span> = <b>${evaluation.total}</b> 分`;
-        
-        showMessage(`打出 ${evaluation.name}！获得 ${evaluation.total} 分！`);
-
-        removeSelectedAndRedraw();
-        checkGameState();
-    }
-
-    // 弃牌逻辑
-    function discardCards() {
-        if (selectedCards.length === 0 || state.discardsLeft <= 0) return;
-        
-        state.discardsLeft--;
-        showMessage(`弃掉了 ${selectedCards.length} 张牌。`);
-        removeSelectedAndRedraw();
-        updateUI();
-    }
-
-    // 移除选中牌并重新抽牌
-    function removeSelectedAndRedraw() {
-        // 从后往前删，避免索引偏移
-        selectedCards.sort((a, b) => b.index - a.index).forEach(s => {
-            hand.splice(s.index, 1);
-        });
-        selectedCards = [];
-        drawCards();
-        updateUI();
-    }
-
-    // 更新界面状态
-    function updateUI() {
-        document.getElementById('total-score').innerText = state.totalScore;
-        document.getElementById('plays-left').innerText = state.playsLeft;
-        document.getElementById('discards-left').innerText = state.discardsLeft;
-    }
-
-    function showMessage(msg) {
-        const msgDiv = document.getElementById('message');
-        msgDiv.innerText = msg;
-        setTimeout(() => msgDiv.innerText = '', 3000);
-    }
-
-    // 检查输赢状态
-    function checkGameState() {
-        updateUI();
-        if (state.totalScore >= state.targetScore) {
-            alert("🎉 恭喜！盲注达标，你赢了！");
-            resetGame();
-        } else if (state.playsLeft <= 0) {
-            alert("💀 出牌次数耗尽，分数未达标，游戏结束。");
-            resetGame();
-        }
-    }
-
-    function resetGame() {
-        state = { targetScore: 300, totalScore: 0, playsLeft: 4, discardsLeft: 3 };
-        initDeck();
-        hand = [];
-        drawCards();
-        updateUI();
-        document.getElementById('last-play-info').innerText = '暂无';
-    }
-
-    // 游戏初始化启动
-    resetGame();
-</script>
-
+    </script>
 </body>
 </html>
