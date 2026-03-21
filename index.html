@@ -3,19 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MBTI心理测试</title>
+  <title>MBTI心理测试（50题）</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; background:#f5f7fb; margin:0; }
     .container { max-width:900px; margin:40px auto; background:#fff; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.08);} 
     h1 { text-align:center; }
-    .question { margin-bottom:20px; }
+    .question { margin-bottom:18px; }
     .question p { font-weight:bold; }
-    .options label { display:block; margin:6px 0; cursor:pointer; }
+    .options label { display:block; margin:4px 0; cursor:pointer; }
     button { width:100%; padding:12px; border:none; border-radius:10px; background:#4f46e5; color:#fff; font-size:16px; cursor:pointer; }
     button:hover { background:#4338ca; }
     #result { margin-top:30px; text-align:center; }
-    canvas { margin-top:20px; }
   </style>
 </head>
 <body>
@@ -28,28 +27,78 @@
   </div>
 
 <script>
-const questions = [];
+// 50道具体题目（每题5级量表）
+const questions = [
+  {text:"在聚会中，你通常更愿意主动与陌生人交流", type:'EI'},
+  {text:"你更喜欢独处而不是长时间社交", type:'EI'},
+  {text:"你更相信现实经验而非直觉", type:'SN'},
+  {text:"你经常思考未来的可能性", type:'SN'},
+  {text:"做决定时你更依赖逻辑分析", type:'TF'},
+  {text:"你更在意他人的感受", type:'TF'},
+  {text:"你喜欢提前制定计划", type:'JP'},
+  {text:"你更喜欢随性而行", type:'JP'},
 
-// 自动生成50题（简化示例）
-for (let i = 1; i <= 50; i++) {
-  questions.push({
-    text: `问题 ${i}：在社交场合中，你更倾向于？`,
-    type: i % 4 === 0 ? 'EI' : i % 4 === 1 ? 'SN' : i % 4 === 2 ? 'TF' : 'JP'
-  });
-}
+  {text:"你在团队中通常是发言较多的人", type:'EI'},
+  {text:"长时间社交会让你感到疲惫", type:'EI'},
+  {text:"你更关注细节而非整体", type:'SN'},
+  {text:"你喜欢抽象概念和想法", type:'SN'},
+  {text:"你倾向于客观判断问题", type:'TF'},
+  {text:"你容易被情绪影响决策", type:'TF'},
+  {text:"你喜欢事情井井有条", type:'JP'},
+  {text:"你能接受计划临时改变", type:'JP'},
+
+  {text:"你喜欢成为注意力中心", type:'EI'},
+  {text:"你更享受安静环境", type:'EI'},
+  {text:"你更信赖事实数据", type:'SN'},
+  {text:"你经常凭直觉判断", type:'SN'},
+  {text:"你认为公平比同情更重要", type:'TF'},
+  {text:"你更看重关系和谐", type:'TF'},
+  {text:"你喜欢提前完成任务", type:'JP'},
+  {text:"你习惯拖到最后再完成", type:'JP'},
+
+  {text:"你乐于结识新朋友", type:'EI'},
+  {text:"你需要独处恢复精力", type:'EI'},
+  {text:"你偏好实际可行的方法", type:'SN'},
+  {text:"你喜欢探索新想法", type:'SN'},
+  {text:"你在争论中更注重逻辑", type:'TF'},
+  {text:"你更容易共情他人", type:'TF'},
+  {text:"你喜欢有明确截止日期", type:'JP'},
+  {text:"你更喜欢灵活安排", type:'JP'},
+
+  {text:"你喜欢参加大型活动", type:'EI'},
+  {text:"你倾向于小范围交流", type:'EI'},
+  {text:"你注重现实细节", type:'SN'},
+  {text:"你喜欢想象未来场景", type:'SN'},
+  {text:"你做事更理性", type:'TF'},
+  {text:"你更重视情感", type:'TF'},
+  {text:"你喜欢按步骤完成任务", type:'JP'},
+  {text:"你做事更随意", type:'JP'},
+
+  {text:"你在陌生环境中很快适应", type:'EI'},
+  {text:"你更喜欢熟悉环境", type:'EI'},
+  {text:"你更关注现在", type:'SN'},
+  {text:"你更关注未来", type:'SN'},
+  {text:"你更重视规则", type:'TF'},
+  {text:"你更重视人情", type:'TF'},
+  {text:"你喜欢稳定节奏", type:'JP'},
+  {text:"你喜欢变化", type:'JP'}
+];
+
+const options = [
+  "1 非常不同意",
+  "2 比较不同意",
+  "3 中立",
+  "4 比较同意",
+  "5 非常同意"
+];
 
 const quizDiv = document.getElementById('quiz');
 
 questions.forEach((q, index) => {
   const div = document.createElement('div');
   div.className = 'question';
-  div.innerHTML = `
-    <p>${q.text}</p>
-    <div class="options">
-      <label><input type="radio" name="q${index}" value="A"> 选项A</label>
-      <label><input type="radio" name="q${index}" value="B"> 选项B</label>
-    </div>
-  `;
+  div.innerHTML = `<p>${index+1}. ${q.text}</p>` +
+    options.map((opt,i)=>`<label><input type=\"radio\" name=\"q${index}\" value=\"${i+1}\"> ${opt}</label>`).join('');
   quizDiv.appendChild(div);
 });
 
@@ -59,18 +108,15 @@ function submitTest() {
   questions.forEach((q, i) => {
     const val = document.querySelector(`input[name=q${i}]:checked`);
     if (!val) return;
-    if (q.type === 'EI') val.value === 'A' ? scores.E++ : scores.I++;
-    if (q.type === 'SN') val.value === 'A' ? scores.S++ : scores.N++;
-    if (q.type === 'TF') val.value === 'A' ? scores.T++ : scores.F++;
-    if (q.type === 'JP') val.value === 'A' ? scores.J++ : scores.P++;
+    let score = parseInt(val.value) - 3; // -2 到 +2
+
+    if (q.type==='EI') score>0 ? scores.E+=score : scores.I+=-score;
+    if (q.type==='SN') score>0 ? scores.S+=score : scores.N+=-score;
+    if (q.type==='TF') score>0 ? scores.T+=score : scores.F+=-score;
+    if (q.type==='JP') score>0 ? scores.J+=score : scores.P+=-score;
   });
 
-  const result = `
-    ${(scores.E > scores.I ? 'E':'I')}
-    ${(scores.S > scores.N ? 'S':'N')}
-    ${(scores.T > scores.F ? 'T':'F')}
-    ${(scores.J > scores.P ? 'J':'P')}
-  `;
+  const result = `${scores.E>=scores.I?'E':'I'}${scores.S>=scores.N?'S':'N'}${scores.T>=scores.F?'T':'F'}${scores.J>=scores.P?'J':'P'}`;
 
   document.getElementById('result').innerHTML = `<h2>你的MBTI类型：${result}</h2>`;
 
