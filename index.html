@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MBTI心理测试</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f7fb; margin:0; }
+    .container { max-width:900px; margin:40px auto; background:#fff; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.08);} 
+    h1 { text-align:center; }
+    .question { margin-bottom:20px; }
+    .question p { font-weight:bold; }
+    .options label { display:block; margin:6px 0; cursor:pointer; }
+    button { width:100%; padding:12px; border:none; border-radius:10px; background:#4f46e5; color:#fff; font-size:16px; cursor:pointer; }
+    button:hover { background:#4338ca; }
+    #result { margin-top:30px; text-align:center; }
+    canvas { margin-top:20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MBTI心理测试（50题）</h1>
+    <form id="quiz"></form>
+    <button onclick="submitTest()">提交测试</button>
+    <div id="result"></div>
+    <canvas id="chart"></canvas>
+  </div>
+
+<script>
+const questions = [];
+
+// 自动生成50题（简化示例）
+for (let i = 1; i <= 50; i++) {
+  questions.push({
+    text: `问题 ${i}：在社交场合中，你更倾向于？`,
+    type: i % 4 === 0 ? 'EI' : i % 4 === 1 ? 'SN' : i % 4 === 2 ? 'TF' : 'JP'
+  });
+}
+
+const quizDiv = document.getElementById('quiz');
+
+questions.forEach((q, index) => {
+  const div = document.createElement('div');
+  div.className = 'question';
+  div.innerHTML = `
+    <p>${q.text}</p>
+    <div class="options">
+      <label><input type="radio" name="q${index}" value="A"> 选项A</label>
+      <label><input type="radio" name="q${index}" value="B"> 选项B</label>
+    </div>
+  `;
+  quizDiv.appendChild(div);
+});
+
+function submitTest() {
+  let scores = {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
+
+  questions.forEach((q, i) => {
+    const val = document.querySelector(`input[name=q${i}]:checked`);
+    if (!val) return;
+    if (q.type === 'EI') val.value === 'A' ? scores.E++ : scores.I++;
+    if (q.type === 'SN') val.value === 'A' ? scores.S++ : scores.N++;
+    if (q.type === 'TF') val.value === 'A' ? scores.T++ : scores.F++;
+    if (q.type === 'JP') val.value === 'A' ? scores.J++ : scores.P++;
+  });
+
+  const result = `
+    ${(scores.E > scores.I ? 'E':'I')}
+    ${(scores.S > scores.N ? 'S':'N')}
+    ${(scores.T > scores.F ? 'T':'F')}
+    ${(scores.J > scores.P ? 'J':'P')}
+  `;
+
+  document.getElementById('result').innerHTML = `<h2>你的MBTI类型：${result}</h2>`;
+
+  drawChart(scores);
+}
+
+function drawChart(scores) {
+  const ctx = document.getElementById('chart');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['E','I','S','N','T','F','J','P'],
+      datasets: [{
+        label: '得分',
+        data: [scores.E, scores.I, scores.S, scores.N, scores.T, scores.F, scores.J, scores.P]
+      }]
+    }
+  });
+}
+</script>
+</body>
+</html>
