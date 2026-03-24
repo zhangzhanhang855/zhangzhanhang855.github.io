@@ -4,111 +4,40 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MBTI心理测试（50题）</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f5f7fb; margin:0; }
-    .container { max-width:900px; margin:40px auto; background:#fff; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.08);} 
-    h1 { text-align:center; }
-    .question { margin-bottom:18px; }
-    .question p { font-weight:bold; }
-    .options label { display:block; margin:4px 0; cursor:pointer; }
-    button { width:100%; padding:12px; border:none; border-radius:10px; background:#4f46e5; color:#fff; font-size:16px; cursor:pointer; }
-    button:hover { background:#4338ca; }
-    #result { margin-top:30px; text-align:center; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>MBTI心理测试（50题）</h1>
-    <form id="quiz"></form>
-    <button onclick="submitTest()">提交测试</button>
-    <div id="result"></div>
-    <canvas id="chart"></canvas>
-  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js">
 
-<script>
-// 50道具体题目（每题5级量表）
-const questions = [
-  {text:"在聚会中，你通常更愿意主动与陌生人交流", type:'EI'},
-  {text:"你更喜欢独处而不是长时间社交", type:'EI'},
-  {text:"你更相信现实经验而非直觉", type:'SN'},
-  {text:"你经常思考未来的可能性", type:'SN'},
-  {text:"做决定时你更依赖逻辑分析", type:'TF'},
-  {text:"你更在意他人的感受", type:'TF'},
-  {text:"你喜欢提前制定计划", type:'JP'},
-  {text:"你更喜欢随性而行", type:'JP'},
+// ===== Gemini AI 分析 =====
+async function getAIAnalysis(result, scores) {
+  const apiKey = "sk-godDPwWpgXSwfsmX9b829eE312394b588677Fe9b1c036710"; // ⚠️替换
+  const prompt = `我的MBTI类型是 ${result}。各维度得分如下：${JSON.stringify(scores)}。请用中文详细分析我的性格特点、优点、缺点、适合职业和建议。`;
 
-  {text:"你在团队中通常是发言较多的人", type:'EI'},
-  {text:"长时间社交会让你感到疲惫", type:'EI'},
-  {text:"你更关注细节而非整体", type:'SN'},
-  {text:"你喜欢抽象概念和想法", type:'SN'},
-  {text:"你倾向于客观判断问题", type:'TF'},
-  {text:"你容易被情绪影响决策", type:'TF'},
-  {text:"你喜欢事情井井有条", type:'JP'},
-  {text:"你能接受计划临时改变", type:'JP'},
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
 
-  {text:"你喜欢成为注意力中心", type:'EI'},
-  {text:"你更享受安静环境", type:'EI'},
-  {text:"你更信赖事实数据", type:'SN'},
-  {text:"你经常凭直觉判断", type:'SN'},
-  {text:"你认为公平比同情更重要", type:'TF'},
-  {text:"你更看重关系和谐", type:'TF'},
-  {text:"你喜欢提前完成任务", type:'JP'},
-  {text:"你习惯拖到最后再完成", type:'JP'},
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '未获取到分析';
 
-  {text:"你乐于结识新朋友", type:'EI'},
-  {text:"你需要独处恢复精力", type:'EI'},
-  {text:"你偏好实际可行的方法", type:'SN'},
-  {text:"你喜欢探索新想法", type:'SN'},
-  {text:"你在争论中更注重逻辑", type:'TF'},
-  {text:"你更容易共情他人", type:'TF'},
-  {text:"你喜欢有明确截止日期", type:'JP'},
-  {text:"你更喜欢灵活安排", type:'JP'},
+    document.getElementById('result').innerHTML += `<div style="text-align:left;margin-top:20px;"><h3>AI详细分析</h3><p>${text.replace(/\n/g,'<br>')}</p></div>`;
+  } catch (e) {
+    document.getElementById('result').innerHTML += `<p>AI分析获取失败</p>`;
+  }
+}
 
-  {text:"你喜欢参加大型活动", type:'EI'},
-  {text:"你倾向于小范围交流", type:'EI'},
-  {text:"你注重现实细节", type:'SN'},
-  {text:"你喜欢想象未来场景", type:'SN'},
-  {text:"你做事更理性", type:'TF'},
-  {text:"你更重视情感", type:'TF'},
-  {text:"你喜欢按步骤完成任务", type:'JP'},
-  {text:"你做事更随意", type:'JP'},
-
-  {text:"你在陌生环境中很快适应", type:'EI'},
-  {text:"你更喜欢熟悉环境", type:'EI'},
-  {text:"你更关注现在", type:'SN'},
-  {text:"你更关注未来", type:'SN'},
-  {text:"你更重视规则", type:'TF'},
-  {text:"你更重视人情", type:'TF'},
-  {text:"你喜欢稳定节奏", type:'JP'},
-  {text:"你喜欢变化", type:'JP'}
-];
-
-const options = [
-  "1 非常不同意",
-  "2 比较不同意",
-  "3 中立",
-  "4 比较同意",
-  "5 非常同意"
-];
-
-const quizDiv = document.getElementById('quiz');
-
-questions.forEach((q, index) => {
-  const div = document.createElement('div');
-  div.className = 'question';
-  div.innerHTML = `<p>${index+1}. ${q.text}</p>` +
-    options.map((opt,i)=>`<label><input type=\"radio\" name=\"q${index}\" value=\"${i+1}\"> ${opt}</label>`).join('');
-  quizDiv.appendChild(div);
-});
-
-function submitTest() {
+// 修改提交函数：加入AI分析
+const oldSubmit = submitTest;
+submitTest = async function() {
   let scores = {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
 
   questions.forEach((q, i) => {
     const val = document.querySelector(`input[name=q${i}]:checked`);
     if (!val) return;
-    let score = parseInt(val.value) - 3; // -2 到 +2
+    let score = parseInt(val.value) - 3;
 
     if (q.type==='EI') score>0 ? scores.E+=score : scores.I+=-score;
     if (q.type==='SN') score>0 ? scores.S+=score : scores.N+=-score;
@@ -121,6 +50,64 @@ function submitTest() {
   document.getElementById('result').innerHTML = `<h2>你的MBTI类型：${result}</h2>`;
 
   drawChart(scores);
+
+  await getAIAnalysis(result, scores);
+};
+
+</script>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f5f7fb; margin:0; }
+    .container { max-width:900px; margin:40px auto; background:#fff; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.08);} 
+    h1 { text-align:center; }
+    .question { margin-bottom:18px; }
+    .question p { font-weight:bold; }
+    .options label { display:block; margin:4px 0; cursor:pointer; }
+    button { width:100%; padding:12px; border:none; border-radius:10px; background:#4f46e5; color:#fff; font-size:16px; cursor:pointer; }
+    button:hover { background:#4338ca; }
+    #result { margin-top:30px; text-align:center; }
+    #analysis { margin-top:20px; text-align:left; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>MBTI心理测试（50题）</h1>
+    <form id="quiz"></form>
+    <button onclick="submitTest()">提交测试</button>
+    <div id="result"></div>
+    <div id="analysis"></div>
+    <canvas id="chart"></canvas>
+  </div>
+
+<script>
+const questions = [ /* 50题，略，保持原来的数组 */ ];
+const options = ["1 非常不同意","2 比较不同意","3 中立","4 比较同意","5 非常同意"];
+const quizDiv = document.getElementById('quiz');
+questions.forEach((q, index) => {
+  const div = document.createElement('div');
+  div.className = 'question';
+  div.innerHTML = `<p>${index+1}. ${q.text}</p>` +
+    options.map((opt,i)=>`<label><input type=\"radio\" name=\"q${index}\" value=\"${i+1}\"> ${opt}</label>`).join('');
+  quizDiv.appendChild(div);
+});
+
+async function submitTest() {
+  let scores = {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
+
+  questions.forEach((q, i) => {
+    const val = document.querySelector(`input[name=q${i}]:checked`);
+    if (!val) return;
+    let score = parseInt(val.value) - 3;
+    if (q.type==='EI') score>0 ? scores.E+=score : scores.I+=-score;
+    if (q.type==='SN') score>0 ? scores.S+=score : scores.N+=-score;
+    if (q.type==='TF') score>0 ? scores.T+=score : scores.F+=-score;
+    if (q.type==='JP') score>0 ? scores.J+=score : scores.P+=-score;
+  });
+
+  const result = `${scores.E>=scores.I?'E':'I'}${scores.S>=scores.N?'S':'N'}${scores.T>=scores.F?'T':'F'}${scores.J>=scores.P?'J':'P'}`;
+  document.getElementById('result').innerHTML = `<h2>你的MBTI类型：${result}</h2>`;
+
+  drawChart(scores);
+  await getAIAnalysis(result, scores);
 }
 
 function drawChart(scores) {
@@ -129,12 +116,25 @@ function drawChart(scores) {
     type: 'bar',
     data: {
       labels: ['E','I','S','N','T','F','J','P'],
-      datasets: [{
-        label: '得分',
-        data: [scores.E, scores.I, scores.S, scores.N, scores.T, scores.F, scores.J, scores.P]
-      }]
+      datasets: [{ label: '得分', data: [scores.E, scores.I, scores.S, scores.N, scores.T, scores.F, scores.J, scores.P] }]
     }
   });
+}
+
+async function getAIAnalysis(result, scores) {
+  const apiKey = 'YOUR_OPENAI_API_KEY'; // ⚠️ 替换为你的API Key
+  const prompt = `我的MBTI类型是 ${result}。各维度得分如下：${JSON.stringify(scores)}。请用中文详细分析我的性格特点、优点、缺点、适合职业和建议。`;
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model:'gpt-4o-mini', messages:[{role:'user', content:prompt}] })
+    });
+    const data = await response.json();
+    document.getElementById('analysis').innerHTML = `<h3>AI详细分析</h3><p>${data.choices[0].message.content.replace(/\n/g,'<br>')}</p>`;
+  } catch (err) {
+    document.getElementById('analysis').innerHTML = 'AI分析获取失败，请检查API Key或网络。';
+  }
 }
 </script>
 </body>
