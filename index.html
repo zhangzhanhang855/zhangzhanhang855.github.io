@@ -1,141 +1,103 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MBTI心理测试（50题）</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js">
-
-// ===== Gemini AI 分析 =====
-async function getAIAnalysis(result, scores) {
-  const apiKey = "sk-godDPwWpgXSwfsmX9b829eE312394b588677Fe9b1c036710"; // ⚠️替换
-  const prompt = `我的MBTI类型是 ${result}。各维度得分如下：${JSON.stringify(scores)}。请用中文详细分析我的性格特点、优点、缺点、适合职业和建议。`;
-
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
-    });
-
-    const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '未获取到分析';
-
-    document.getElementById('result').innerHTML += `<div style="text-align:left;margin-top:20px;"><h3>AI详细分析</h3><p>${text.replace(/\n/g,'<br>')}</p></div>`;
-  } catch (e) {
-    document.getElementById('result').innerHTML += `<p>AI分析获取失败</p>`;
-  }
-}
-
-// 修改提交函数：加入AI分析
-const oldSubmit = submitTest;
-submitTest = async function() {
-  let scores = {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
-
-  questions.forEach((q, i) => {
-    const val = document.querySelector(`input[name=q${i}]:checked`);
-    if (!val) return;
-    let score = parseInt(val.value) - 3;
-
-    if (q.type==='EI') score>0 ? scores.E+=score : scores.I+=-score;
-    if (q.type==='SN') score>0 ? scores.S+=score : scores.N+=-score;
-    if (q.type==='TF') score>0 ? scores.T+=score : scores.F+=-score;
-    if (q.type==='JP') score>0 ? scores.J+=score : scores.P+=-score;
-  });
-
-  const result = `${scores.E>=scores.I?'E':'I'}${scores.S>=scores.N?'S':'N'}${scores.T>=scores.F?'T':'F'}${scores.J>=scores.P?'J':'P'}`;
-
-  document.getElementById('result').innerHTML = `<h2>你的MBTI类型：${result}</h2>`;
-
-  drawChart(scores);
-
-  await getAIAnalysis(result, scores);
-};
-
-</script>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f5f7fb; margin:0; }
-    .container { max-width:900px; margin:40px auto; background:#fff; padding:30px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.08);} 
-    h1 { text-align:center; }
-    .question { margin-bottom:18px; }
-    .question p { font-weight:bold; }
-    .options label { display:block; margin:4px 0; cursor:pointer; }
-    button { width:100%; padding:12px; border:none; border-radius:10px; background:#4f46e5; color:#fff; font-size:16px; cursor:pointer; }
-    button:hover { background:#4338ca; }
-    #result { margin-top:30px; text-align:center; }
-    #analysis { margin-top:20px; text-align:left; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的纯本地网页AI</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; display: flex; justify-content: center; padding: 20px; }
+        #chat-container { width: 100%; max-width: 600px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; flex-direction: column; height: 80vh; }
+        #messages { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #eee; }
+        .msg { margin-bottom: 15px; padding: 10px; border-radius: 8px; }
+        .user { background: #e3f2fd; align-self: flex-end; }
+        .ai { background: #f1f8e9; align-self: flex-start; }
+        #input-area { padding: 20px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 5px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:disabled { background: #ccc; }
+        #status { font-size: 12px; color: #666; padding: 0 20px 10px; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <h1>MBTI心理测试（50题）</h1>
-    <form id="quiz"></form>
-    <button onclick="submitTest()">提交测试</button>
-    <div id="result"></div>
-    <div id="analysis"></div>
-    <canvas id="chart"></canvas>
-  </div>
 
-<script>
-const questions = [ /* 50题，略，保持原来的数组 */ ];
-const options = ["1 非常不同意","2 比较不同意","3 中立","4 比较同意","5 非常同意"];
-const quizDiv = document.getElementById('quiz');
-questions.forEach((q, index) => {
-  const div = document.createElement('div');
-  div.className = 'question';
-  div.innerHTML = `<p>${index+1}. ${q.text}</p>` +
-    options.map((opt,i)=>`<label><input type=\"radio\" name=\"q${index}\" value=\"${i+1}\"> ${opt}</label>`).join('');
-  quizDiv.appendChild(div);
-});
+<div id="chat-container">
+    <h3 style="text-align: center;">纯本地浏览器 AI</h3>
+    <div id="status">正在初始化引擎 (第一次加载较慢)...</div>
+    <div id="messages"></div>
+    <div id="input-area">
+        <input type="text" id="user-input" placeholder="输入消息..." disabled>
+        <button id="send-btn" disabled>发送</button>
+    </div>
+</div>
 
-async function submitTest() {
-  let scores = {E:0,I:0,S:0,N:0,T:0,F:0,J:0,P:0};
+<!-- 引入 WebLLM 核心库 -->
+<script type="module">
+    import * as webllm from "https://esm.run/@mlc-ai/web-llm";
 
-  questions.forEach((q, i) => {
-    const val = document.querySelector(`input[name=q${i}]:checked`);
-    if (!val) return;
-    let score = parseInt(val.value) - 3;
-    if (q.type==='EI') score>0 ? scores.E+=score : scores.I+=-score;
-    if (q.type==='SN') score>0 ? scores.S+=score : scores.N+=-score;
-    if (q.type==='TF') score>0 ? scores.T+=score : scores.F+=-score;
-    if (q.type==='JP') score>0 ? scores.J+=score : scores.P+=-score;
-  });
+    const messagesContainer = document.getElementById("messages");
+    const userInput = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    const statusLabel = document.getElementById("status");
 
-  const result = `${scores.E>=scores.I?'E':'I'}${scores.S>=scores.N?'S':'N'}${scores.T>=scores.F?'T':'F'}${scores.J>=scores.P?'J':'P'}`;
-  document.getElementById('result').innerHTML = `<h2>你的MBTI类型：${result}</h2>`;
+    // 1. 配置模型 (选择一个超轻量级的模型，适合浏览器运行)
+    const selectedModel = "Llama-3-8B-Instruct-q4f16_1-MLC"; 
+    
+    let engine;
 
-  drawChart(scores);
-  await getAIAnalysis(result, scores);
-}
-
-function drawChart(scores) {
-  const ctx = document.getElementById('chart');
-  new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['E','I','S','N','T','F','J','P'],
-      datasets: [{ label: '得分', data: [scores.E, scores.I, scores.S, scores.N, scores.T, scores.F, scores.J, scores.P] }]
+    // 初始化 AI 引擎
+    async function init() {
+        engine = await webllm.createEngine(selectedModel, {
+            initProgressCallback: (report) => {
+                statusLabel.innerText = `加载进度: ${Math.round(report.progress * 100)}% - ${report.text}`;
+            }
+        });
+        statusLabel.innerText = "AI 已就绪（运行在本地显卡）";
+        userInput.disabled = false;
+        sendBtn.disabled = false;
     }
-  });
-}
 
-async function getAIAnalysis(result, scores) {
-  const apiKey = 'YOUR_OPENAI_API_KEY'; // ⚠️ 替换为你的API Key
-  const prompt = `我的MBTI类型是 ${result}。各维度得分如下：${JSON.stringify(scores)}。请用中文详细分析我的性格特点、优点、缺点、适合职业和建议。`;
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({ model:'gpt-4o-mini', messages:[{role:'user', content:prompt}] })
-    });
-    const data = await response.json();
-    document.getElementById('analysis').innerHTML = `<h3>AI详细分析</h3><p>${data.choices[0].message.content.replace(/\n/g,'<br>')}</p>`;
-  } catch (err) {
-    document.getElementById('analysis').innerHTML = 'AI分析获取失败，请检查API Key或网络。';
-  }
-}
+    // 发送消息函数
+    async function handleSend() {
+        const text = userInput.value.trim();
+        if (!text) return;
+
+        // 显示用户消息
+        appendMessage("user", text);
+        userInput.value = "";
+
+        // AI 生成回答
+        const chatMessages = [{ role: "user", content: text }];
+        appendMessage("ai", "正在思考...", "current-ai");
+        
+        let curMessage = "";
+        const reply = await engine.chat.completions.create({
+            messages: chatMessages,
+            stream: true, // 开启流式打印，一个字一个字出
+        });
+
+        for await (const chunk of reply) {
+            const curDelta = chunk.choices[0].delta.content || "";
+            curMessage += curDelta;
+            document.getElementById("current-ai").innerText = curMessage;
+        }
+        
+        document.getElementById("current-ai").removeAttribute("id");
+    }
+
+    function appendMessage(role, text, id = "") {
+        const div = document.createElement("div");
+        div.className = `msg ${role}`;
+        if (id) div.id = id;
+        div.innerText = text;
+        messagesContainer.appendChild(div);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    sendBtn.onclick = handleSend;
+    userInput.addEventListener("keypress", (e) => { if(e.key === "Enter") handleSend(); });
+
+    init();
 </script>
+
 </body>
 </html>
