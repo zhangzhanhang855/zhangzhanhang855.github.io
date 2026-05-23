@@ -1,439 +1,149 @@
-```react
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>至尊斗地主 - 3D 巅峰对决</title>
+    <title>3D 模型在线查看器</title>
+    
+    <!-- 引入 Google 的 model-viewer 核心库 -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    
     <style>
-        :root {
-            --table-green: #1a4a2e;
-            --gold: #f1c40f;
-            --card-white: #ffffff;
-            --transition-speed: 0.3s;
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #1e1e1e;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        #header {
+            padding: 20px;
+            background-color: #2d2d2d;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 10;
         }
 
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background: #000;
-            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        #header h2 {
+            margin: 0 0 10px 0;
+            font-weight: 500;
+        }
+        
+        #header p {
+            margin: 0 0 15px 0;
+            font-size: 14px;
+            color: #aaaaaa;
         }
 
-        #scene {
-            width: 100vw; height: 100vh;
-            perspective: 1200px; /* 3D 透视点 */
-            background: radial-gradient(circle at center, #2c3e50 0%, #000 100%);
-            display: flex; align-items: center; justify-content: center;
+        /* 美化上传按钮 */
+        input[type="file"] {
+            display: none;
         }
-
-        #table {
-            width: 90%; height: 80%;
-            background: var(--table-green);
-            border: 15px solid #3d2b1f;
-            border-radius: 100px;
-            box-shadow: inset 0 0 100px rgba(0,0,0,0.8), 0 50px 100px rgba(0,0,0,0.5);
-            transform: rotateX(25deg); /* 牌桌倾斜形成3D感 */
-            position: relative;
-            display: flex; flex-direction: column;
-            justify-content: space-between;
-            padding: 40px;
-            overflow: visible;
-        }
-
-        /* 难度选择遮罩 */
-        #menu-overlay {
-            position: fixed; inset: 0; z-index: 9999;
-            background: rgba(0,0,0,0.9);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            color: var(--gold);
-        }
-
-        .btn {
-            padding: 15px 45px; margin: 15px; font-size: 1.2rem;
-            border: none; border-radius: 50px; cursor: pointer;
-            background: linear-gradient(135deg, #f39c12, #e67e22);
-            color: white; font-weight: bold; text-transform: uppercase;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            transition: all 0.2s;
-        }
-        .btn:hover { transform: translateY(-5px) scale(1.05); box-shadow: 0 15px 25px rgba(243, 156, 18, 0.4); }
-        .btn:active { transform: translateY(0); }
-
-        /* 卡牌基础样式 */
-        .card {
-            width: 100px; height: 145px;
-            background: white; border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            position: relative;
-            display: flex; flex-direction: column;
-            padding: 8px; font-weight: bold;
-            transition: all var(--transition-speed) cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .upload-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
             cursor: pointer;
-            user-select: none;
-            transform-style: preserve-3d;
-            backface-visibility: hidden;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .upload-btn:hover {
+            background-color: #0056b3;
         }
 
-        .card.selected {
-            transform: translateY(-40px) translateZ(30px);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 15px var(--gold);
+        #viewer-container {
+            flex-grow: 1;
+            position: relative;
+            width: 100%;
+            height: 100%;
         }
 
-        .card-val { font-size: 28px; line-height: 1; }
-        .card-suit { font-size: 20px; }
-        .red { color: #e74c3c; }
-        .black { color: #2c3e50; }
-
-        .ai-back {
-            background: linear-gradient(135deg, #2980b9, #2c3e50);
-            border: 2px solid rgba(255,255,255,0.2);
+        /* model-viewer 样式设定 */
+        model-viewer {
+            width: 100%;
+            height: 100%;
+            background-color: #1e1e1e;
+            --poster-color: transparent;
         }
 
-        /* 布局区域 */
-        #ai-hand, #player-hand, #desk-area {
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        .hand-container {
-            display: flex; gap: -60px; /* 负间距重叠 */
-        }
-
-        .hand-container .card {
-            margin-left: -65px;
-        }
-        .hand-container .card:first-child { margin-left: 0; }
-
-        #desk-area {
-            flex: 1; flex-direction: column; gap: 20px;
-            transform: translateZ(50px);
-        }
-
-        .played-cards {
-            height: 150px; display: flex; justify-content: center; align-items: center;
-        }
-
-        /* 操控按钮 */
-        .controls {
-            position: absolute; bottom: 180px; left: 50%;
-            transform: translateX(-50%) translateZ(100px);
-            display: flex; gap: 20px;
-        }
-
-        /* 文字特效 */
-        #msg-box {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%) translateZ(150px);
-            font-size: 5rem; font-weight: 900; color: var(--gold);
-            text-shadow: 0 0 20px rgba(241, 196, 15, 0.8);
-            pointer-events: none; opacity: 0; transition: 0.5s;
-            white-space: nowrap;
-        }
-
-        /* 动画关键帧 */
-        .shake { animation: tableShake 0.5s; }
-        @keyframes tableShake {
-            0% { transform: rotateX(25deg) translate(0,0); }
-            25% { transform: rotateX(25deg) translate(-10px, 5px); }
-            50% { transform: rotateX(25deg) translate(10px, -5px); }
-            75% { transform: rotateX(25deg) translate(-10px, -5px); }
-            100% { transform: rotateX(25deg) translate(0,0); }
+        /* 初始提示文字 */
+        .instructions {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #666;
+            text-align: center;
+            pointer-events: none; /* 让鼠标穿透文字，不影响操作 */
+            font-size: 16px;
+            line-height: 1.5;
         }
     </style>
 </head>
 <body>
 
-<div id="scene">
-    <div id="menu-overlay">
-        <h1 style="font-size: 3.5rem; margin-bottom: 0;">至尊斗地主 3D</h1>
-        <p style="letter-spacing: 3px; color: #aaa;">SUPREME POKER 3D</p>
-        <button class="btn" onclick="game.start('hard')">地狱难度 AI</button>
-        <button class="btn" onclick="game.start('easy')" style="background: #34495e;">新手练习</button>
+    <div id="header">
+        <h2>在线 3D 模型观察器</h2>
+        <p>请选择您的 3D 模型文件（目前支持 Web 标准格式 <strong>.glb</strong> 或 <strong>.gltf</strong>）</p>
+        <label for="file-upload" class="upload-btn">
+            📂 上传 3D 文件
+        </label>
+        <input type="file" id="file-upload" accept=".glb,.gltf">
     </div>
 
-    <div id="table">
-        <!-- AI 区域 -->
-        <div id="ai-hand" class="hand-container"></div>
-
-        <!-- 出牌区 -->
-        <div id="desk-area">
-            <div id="ai-out" class="played-cards"></div>
-            <div id="player-out" class="played-cards"></div>
+    <div id="viewer-container">
+        <div class="instructions" id="instruction-text">
+            模型将显示在这里<br>
+            👆 左键拖拽旋转 | 🖱️ 滚轮缩放 | ✋ 右键平移
         </div>
-
-        <!-- 玩家区域 -->
-        <div id="player-hand" class="hand-container"></div>
-
-        <!-- 文字特效层 -->
-        <div id="msg-box">炸弹</div>
-
-        <!-- 按钮层 -->
-        <div class="controls" id="game-controls" style="display: none;">
-            <button class="btn" style="padding: 10px 30px;" onclick="game.play()">出牌</button>
-            <button class="btn" style="padding: 10px 30px; background: #7f8c8d;" onclick="game.pass()">不出</button>
-            <button class="btn" style="padding: 10px 30px; background: #2980b9;" onclick="game.hint()">提示</button>
-        </div>
+        
+        <!-- 
+            camera-controls: 开启鼠标控制（旋转/缩放/平移）
+            auto-rotate: 开启自动缓慢旋转
+            shadow-intensity: 开启底部阴影，增加立体感
+        -->
+        <model-viewer id="model-viewer"
+                      alt="用户上传的 3D 模型"
+                      camera-controls
+                      auto-rotate
+                      shadow-intensity="1"
+                      exposure="1">
+        </model-viewer>
     </div>
-</div>
 
-<script>
-/**
- * 核心扑克规则引擎
- */
-const CardRule = {
-    // 权值定义：3-10, J:11, Q:12, K:13, A:14, 2:15, 小王:16, 大王:17
-    getType(cards) {
-        if (!cards || cards.length === 0) return null;
-        const len = cards.length;
-        const vals = cards.map(c => c.val).sort((a, b) => a - b);
-        const counts = {};
-        vals.forEach(v => counts[v] = (counts[v] || 0) + 1);
-        const countKeys = Object.keys(counts).map(Number).sort((a,b)=>a-b);
-        const countValues = Object.values(counts);
-
-        // 1. 王炸
-        if (len === 2 && vals[0] === 16 && vals[1] === 17) return { type: 'ROCKET', weight: 9999, len };
+    <script>
+        const fileUpload = document.getElementById('file-upload');
+        const modelViewer = document.getElementById('model-viewer');
+        const instructionText = document.getElementById('instruction-text');
         
-        // 2. 炸弹
-        if (len === 4 && countValues.includes(4)) return { type: 'BOMB', weight: countKeys.find(k => counts[k] === 4) + 1000, len };
+        // 用于记录当前生成的本地文件 URL，方便后续释放内存
+        let currentObjectUrl = null;
 
-        // 3. 单张
-        if (len === 1) return { type: 'SINGLE', weight: vals[0], len };
-
-        // 4. 对子
-        if (len === 2 && countValues.includes(2)) return { type: 'PAIR', weight: vals[0], len };
-
-        // 5. 三张
-        if (len === 3 && countValues.includes(3)) return { type: 'TRIO', weight: vals[0], len };
-
-        // 6. 三带一 / 三带对
-        if (len === 4 && countValues.includes(3)) return { type: 'TRIO_1', weight: countKeys.find(k => counts[k] === 3), len };
-        if (len === 5 && countValues.includes(3) && countValues.includes(2)) return { type: 'TRIO_2', weight: countKeys.find(k => counts[k] === 3), len };
-
-        // 7. 顺子
-        if (len >= 5 && countValues.every(v => v === 1) && (vals[len-1] - vals[0] === len - 1) && vals[len-1] < 15) {
-            return { type: 'STRAIGHT', weight: vals[0], len };
-        }
-
-        // 8. 连对
-        if (len >= 6 && len % 2 === 0 && countValues.every(v => v === 2) && (vals[countKeys.length-1] - vals[0] === countKeys.length-1) && vals[len-1] < 15) {
-            return { type: 'DOUBLE_STRAIGHT', weight: vals[0], len };
-        }
-
-        return null;
-    },
-
-    // 比较逻辑：修复了无法压过的问题
-    canBeat(newCards, oldMove) {
-        if (!oldMove) return true;
-        const newMove = this.getType(newCards);
-        if (!newMove) return false;
-
-        // 王炸无敌
-        if (newMove.type === 'ROCKET') return true;
-        if (oldMove.type === 'ROCKET') return false;
-
-        // 炸弹逻辑
-        if (newMove.type === 'BOMB' && oldMove.type !== 'BOMB') return true;
-        
-        // 普通牌型：类型必须一致且长度必须一致
-        if (newMove.type === oldMove.type && newMove.len === oldMove.len) {
-            return newMove.weight > oldMove.weight;
-        }
-
-        return false;
-    }
-};
-
-/**
- * 游戏管理器
- */
-const game = {
-    playerHand: [],
-    aiHand: [],
-    selectedIndices: [],
-    lastMove: null, // {type, weight, len, cards}
-    turn: 'player',
-
-    start(difficulty) {
-        document.getElementById('menu-overlay').style.opacity = 0;
-        setTimeout(() => {
-            document.getElementById('menu-overlay').style.display = 'none';
-            document.getElementById('game-controls').style.display = 'flex';
-        }, 500);
-
-        // 初始化牌堆
-        let deck = [];
-        const suits = ['♠', '♥', '♣', '♦'];
-        for (let v = 3; v <= 15; v++) {
-            suits.forEach((s, i) => deck.push({ val: v, suit: s, color: (i%2===1?'red':'black') }));
-        }
-        deck.push({ val: 16, suit: '🃏', color: 'red' });
-        deck.push({ val: 17, suit: '🃏', color: 'red' });
-        deck.sort(() => Math.random() - 0.5);
-
-        this.playerHand = deck.slice(0, 17).sort((a,b) => b.val - a.val);
-        this.aiHand = deck.slice(17, 34).sort((a,b) => b.val - a.val);
-        this.render();
-    },
-
-    render() {
-        const pArea = document.getElementById('player-hand');
-        pArea.innerHTML = '';
-        this.playerHand.forEach((c, i) => {
-            const cardEl = this.createCardEl(c);
-            if (this.selectedIndices.includes(i)) cardEl.classList.add('selected');
-            cardEl.onclick = () => this.toggleSelect(i);
-            pArea.appendChild(cardEl);
-        });
-
-        const aArea = document.getElementById('ai-hand');
-        aArea.innerHTML = '';
-        this.aiHand.forEach(() => {
-            const cardEl = document.createElement('div');
-            cardEl.className = 'card ai-back';
-            aArea.appendChild(cardEl);
-        });
-    },
-
-    createCardEl(c) {
-        const map = {11:'J', 12:'Q', 13:'K', 14:'A', 15:'2', 16:'S', 17:'B'};
-        const div = document.createElement('div');
-        div.className = `card ${c.color}`;
-        div.innerHTML = `
-            <div class="card-val">${map[c.val] || c.val}</div>
-            <div class="card-suit">${c.suit}</div>
-        `;
-        return div;
-    },
-
-    toggleSelect(i) {
-        if (this.turn !== 'player') return;
-        const pos = this.selectedIndices.indexOf(i);
-        if (pos > -1) this.selectedIndices.splice(pos, 1);
-        else this.selectedIndices.push(i);
-        this.render();
-    },
-
-    play() {
-        if (this.turn !== 'player') return;
-        const selected = this.selectedIndices.map(i => this.playerHand[i]);
-        if (CardRule.canBeat(selected, this.lastMove)) {
-            const moveInfo = CardRule.getType(selected);
-            this.executeMove('player', selected, moveInfo);
+        fileUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
             
-            if (this.playerHand.length === 0) {
-                this.showMsg("你赢了！");
-                return;
-            }
-            
-            this.turn = 'ai';
-            setTimeout(() => this.aiThink(), 1000);
-        } else {
-            this.showMsg("不符合规则或太小！", "#e74c3c");
-        }
-    },
-
-    pass() {
-        if (this.turn !== 'player' || !this.lastMove) return;
-        document.getElementById('player-out').innerHTML = '<span style="color:#aaa; font-style:italic">不出</span>';
-        this.lastMove = null;
-        this.turn = 'ai';
-        setTimeout(() => this.aiThink(), 800);
-    },
-
-    executeMove(role, cards, info) {
-        this.lastMove = { ...info, cards };
-        const outArea = document.getElementById(role + '-out');
-        outArea.innerHTML = '';
-        cards.forEach(c => outArea.appendChild(this.createCardEl(c)));
-
-        if (role === 'player') {
-            this.playerHand = this.playerHand.filter(c => !cards.includes(c));
-            this.selectedIndices = [];
-        } else {
-            this.aiHand = this.aiHand.filter(c => !cards.includes(c));
-        }
-
-        if (info.type === 'BOMB' || info.type === 'ROCKET') {
-            this.showMsg(info.type, "#f1c40f");
-            document.getElementById('table').classList.add('shake');
-            setTimeout(() => document.getElementById('table').classList.remove('shake'), 500);
-        }
-
-        this.render();
-    },
-
-    aiThink() {
-        // AI 极简逻辑优化版
-        const hand = [...this.aiHand].sort((a,b) => a.val - b.val);
-        let bestCards = null;
-
-        if (!this.lastMove) {
-            // 出最小单张
-            bestCards = [hand[0]];
-        } else {
-            // 简单搜索比上家大的最小牌
-            if (this.lastMove.type === 'SINGLE') {
-                const c = hand.find(x => x.val > this.lastMove.weight);
-                if (c) bestCards = [c];
-            } else if (this.lastMove.type === 'PAIR') {
-                for(let i=0; i<hand.length-1; i++) {
-                    if(hand[i].val === hand[i+1].val && hand[i].val > this.lastMove.weight) {
-                        bestCards = [hand[i], hand[i+1]];
-                        break;
-                    }
+            if (file) {
+                // 如果之前加载过模型，先释放旧的内存
+                if (currentObjectUrl) {
+                    URL.revokeObjectURL(currentObjectUrl);
                 }
+
+                // URL.createObjectURL 可以将本地文件临时转化为浏览器可以访问的 URL
+                currentObjectUrl = URL.createObjectURL(file);
+                
+                // 将本地 URL 赋值给 3D 视图组件
+                modelViewer.src = currentObjectUrl;
+                
+                // 隐藏背景的提示文字
+                instructionText.style.display = 'none';
             }
-            // 如果没找到，尝试炸弹
-            if (!bestCards) {
-                for(let i=0; i<hand.length-3; i++) {
-                    if(hand[i].val === hand[i+3].val) {
-                        bestCards = hand.slice(i, i+4);
-                        break;
-                    }
-                }
-            }
-        }
-
-        if (bestCards) {
-            this.executeMove('ai', bestCards, CardRule.getType(bestCards));
-            if (this.aiHand.length === 0) this.showMsg("AI 赢了");
-        } else {
-            document.getElementById('ai-out').innerHTML = '<span style="color:#aaa; font-style:italic">不要</span>';
-            this.lastMove = null;
-        }
-        this.turn = 'player';
-    },
-
-    showMsg(txt, color) {
-        const box = document.getElementById('msg-box');
-        box.innerText = txt;
-        box.style.color = color || 'var(--gold)';
-        box.style.opacity = 1;
-        setTimeout(() => box.style.opacity = 0, 1500);
-    },
-
-    hint() {
-        const hand = [...this.playerHand].sort((a,b) => a.val - b.val);
-        let found = null;
-        if (!this.lastMove) {
-            found = [hand[0]];
-        } else {
-            // 复用简单的搜索逻辑
-            if (this.lastMove.type === 'SINGLE') {
-                const c = hand.find(x => x.val > this.lastMove.weight);
-                if (c) found = [c];
-            }
-        }
-
-        if (found) {
-            this.selectedIndices = found.map(fc => this.playerHand.indexOf(fc));
-            this.render();
-        }
-    }
-};
-</script>
+        });
+    </script>
 </body>
 </html>
-
-```
