@@ -3,10 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D 模型在线查看器</title>
-    
-    <!-- 引入 Google 的 model-viewer 核心库 -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+    <title>USDZ 3D 模型观察器</title>
     
     <style>
         body {
@@ -29,23 +26,12 @@
             z-index: 10;
         }
 
-        #header h2 {
-            margin: 0 0 10px 0;
-            font-weight: 500;
-        }
-        
-        #header p {
-            margin: 0 0 15px 0;
-            font-size: 14px;
-            color: #aaaaaa;
-        }
+        #header h2 { margin: 0 0 10px 0; font-weight: 500; }
+        #header p { margin: 0 0 15px 0; font-size: 14px; color: #aaaaaa; }
 
-        /* 美化上传按钮 */
-        input[type="file"] {
-            display: none;
-        }
+        input[type="file"] { display: none; }
         .upload-btn {
-            background-color: #007bff;
+            background-color: #28a745;
             color: white;
             padding: 10px 20px;
             border-radius: 5px;
@@ -53,9 +39,7 @@
             font-size: 14px;
             transition: background-color 0.3s;
         }
-        .upload-btn:hover {
-            background-color: #0056b3;
-        }
+        .upload-btn:hover { background-color: #218838; }
 
         #viewer-container {
             flex-grow: 1;
@@ -64,15 +48,6 @@
             height: 100%;
         }
 
-        /* model-viewer 样式设定 */
-        model-viewer {
-            width: 100%;
-            height: 100%;
-            background-color: #1e1e1e;
-            --poster-color: transparent;
-        }
-
-        /* 初始提示文字 */
         .instructions {
             position: absolute;
             top: 50%;
@@ -80,69 +55,160 @@
             transform: translate(-50%, -50%);
             color: #666;
             text-align: center;
-            pointer-events: none; /* 让鼠标穿透文字，不影响操作 */
+            pointer-events: none;
             font-size: 16px;
-            line-height: 1.5;
+            z-index: 5;
+        }
+
+        /* Loading 提示 */
+        #loading {
+            display: none;
+            position: absolute;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #28a745;
+            font-weight: bold;
+            z-index: 6;
         }
     </style>
+
+    <!-- 配置 Three.js 的导入映射 (Import Map) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
 </head>
 <body>
 
     <div id="header">
-        <h2>在线 3D 模型观察器</h2>
-        <p>请选择您的 3D 模型文件（目前支持 Web 标准格式 <strong>.glb</strong> 或 <strong>.gltf</strong>）</p>
+        <h2>USDZ 3D 模型观察器</h2>
+        <p>基于 Three.js 引擎，支持直接在网页端渲染 Apple 的 <strong>.usdz</strong> 格式</p>
         <label for="file-upload" class="upload-btn">
-            📂 上传 3D 文件
+            📂 上传 USDZ 文件
         </label>
-        <input type="file" id="file-upload" accept=".glb,.gltf">
+        <input type="file" id="file-upload" accept=".usdz">
     </div>
 
     <div id="viewer-container">
         <div class="instructions" id="instruction-text">
-            模型将显示在这里<br>
             👆 左键拖拽旋转 | 🖱️ 滚轮缩放 | ✋ 右键平移
         </div>
-        
-        <!-- 
-            camera-controls: 开启鼠标控制（旋转/缩放/平移）
-            auto-rotate: 开启自动缓慢旋转
-            shadow-intensity: 开启底部阴影，增加立体感
-        -->
-        <model-viewer id="model-viewer"
-                      alt="用户上传的 3D 模型"
-                      camera-controls
-                      auto-rotate
-                      shadow-intensity="1"
-                      exposure="1">
-        </model-viewer>
+        <div id="loading">正在解析 USDZ 文件，请稍候...</div>
     </div>
 
-    <script>
-        const fileUpload = document.getElementById('file-upload');
-        const modelViewer = document.getElementById('model-viewer');
-        const instructionText = document.getElementById('instruction-text');
+    <!-- 核心 Three.js 逻辑 -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { USDZLoader } from 'three/addons/loaders/USDZLoader.js';
+
+        // 1. 基础场景设置
+        const container = document.getElementById('viewer-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x1e1e1e);
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 2, 5);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        // 开启物理光照渲染
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.0;
+        container.appendChild(renderer.domElement);
+
+        // 2. 鼠标控制器
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true; 
+        controls.dampingFactor = 0.05;
+
+        // 3. 灯光设置 (模拟自然环境光)
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.5);
+        scene.add(ambientLight);
         
-        // 用于记录当前生成的本地文件 URL，方便后续释放内存
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 2);
+        directionalLight.position.set(5, 10, 7.5);
+        scene.add(directionalLight);
+
+        // 4. 窗口自适应
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // 5. 动画循环
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 6. 文件上传与 USDZ 解析逻辑
+        let currentModel = null;
         let currentObjectUrl = null;
+        const loader = new USDZLoader();
 
-        fileUpload.addEventListener('change', function(event) {
+        document.getElementById('file-upload').addEventListener('change', function(event) {
             const file = event.target.files[0];
-            
-            if (file) {
-                // 如果之前加载过模型，先释放旧的内存
-                if (currentObjectUrl) {
-                    URL.revokeObjectURL(currentObjectUrl);
-                }
+            if (!file) return;
 
-                // URL.createObjectURL 可以将本地文件临时转化为浏览器可以访问的 URL
-                currentObjectUrl = URL.createObjectURL(file);
-                
-                // 将本地 URL 赋值给 3D 视图组件
-                modelViewer.src = currentObjectUrl;
-                
-                // 隐藏背景的提示文字
-                instructionText.style.display = 'none';
+            // UI 切换
+            document.getElementById('instruction-text').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+
+            // 清理旧模型和内存
+            if (currentModel) {
+                scene.remove(currentModel);
+                currentModel = null;
             }
+            if (currentObjectUrl) {
+                URL.revokeObjectURL(currentObjectUrl);
+            }
+
+            currentObjectUrl = URL.createObjectURL(file);
+
+            // 加载 USDZ
+            loader.load(currentObjectUrl, function (usdzGroup) {
+                currentModel = usdzGroup;
+                scene.add(currentModel);
+
+                // 自动居中并适配摄像机距离
+                const box = new THREE.Box3().setFromObject(currentModel);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                // 将模型移到场景中心
+                currentModel.position.x += (currentModel.position.x - center.x);
+                currentModel.position.y += (currentModel.position.y - center.y);
+                currentModel.position.z += (currentModel.position.z - center.z);
+
+                // 根据模型大小自动调整摄像机距离
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 * Math.tan(fov * 2));
+                cameraZ *= 2.5; // 预留一定边距
+                camera.position.set(0, size.y / 2, cameraZ);
+                
+                controls.target.set(0, 0, 0);
+                controls.update();
+
+                document.getElementById('loading').style.display = 'none';
+            }, 
+            undefined, // 进度条回调（此处省略）
+            function (error) {
+                console.error("加载失败:", error);
+                alert("模型加载失败，可能是文件损坏或包含不支持的复杂材质。");
+                document.getElementById('loading').style.display = 'none';
+            });
         });
     </script>
 </body>
