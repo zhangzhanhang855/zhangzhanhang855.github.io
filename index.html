@@ -37,7 +37,7 @@
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
             width: 100%;
-            max-width: 450px;
+            max-width: 480px;
         }
 
         h2 {
@@ -67,11 +67,23 @@
             font-size: 16px;
             outline: none;
             transition: border-color 0.2s;
+            background-color: #fff;
         }
 
         input:focus, select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        optgroup {
+            font-weight: bold;
+            color: var(--primary-color);
+            font-style: normal;
+        }
+
+        optgroup option {
+            color: var(--text-main);
+            font-weight: normal;
         }
 
         .swap-btn-container {
@@ -115,6 +127,7 @@
             font-weight: bold;
             color: var(--primary-color);
             margin-bottom: 6px;
+            word-break: break-all;
         }
 
         .update-time {
@@ -141,15 +154,7 @@
     <div class="input-group">
         <label for="from-currency">持有币种 (From)</label>
         <select id="from-currency">
-            <option value="CNY" selected>CNY - 人民币</option>
-            <option value="USD">USD - 美元</option>
-            <option value="EUR">EUR - 欧元</option>
-            <option value="JPY">JPY - 日元</option>
-            <option value="HKD">HKD - 港币</option>
-            <option value="GBP">GBP - 英镑</option>
-            <option value="AUD">AUD - 澳大利亚元</option>
-            <option value="CAD">CAD - 加拿大元</option>
-        </select>
+            </select>
     </div>
 
     <div class="swap-btn-container">
@@ -159,15 +164,7 @@
     <div class="input-group">
         <label for="to-currency">兑换币种 (To)</label>
         <select id="to-currency">
-            <option value="CNY">CNY - 人民币</option>
-            <option value="USD" selected>USD - 美元</option>
-            <option value="EUR">EUR - 欧元</option>
-            <option value="JPY">JPY - 日元</option>
-            <option value="HKD">HKD - 港币</option>
-            <option value="GBP">GBP - 英镑</option>
-            <option value="AUD">AUD - 澳大利亚元</option>
-            <option value="CAD">CAD - 加拿大元</option>
-        </select>
+            </select>
     </div>
 
     <div class="result-box">
@@ -177,6 +174,65 @@
 </div>
 
 <script>
+    // 定义 35 种主流和常见币种数据（按地区分组）
+    const currencyData = [
+        {
+            group: "常用币种",
+            currencies: [
+                { code: "CNY", name: "CNY - 人民币" },
+                { code: "USD", name: "USD - 美元" },
+                { code: "EUR", name: "EUR - 欧元" },
+                { code: "HKD", name: "HKD - 港币" },
+                { code: "JPY", name: "JPY - 日元" },
+                { code: "GBP", name: "GBP - 英镑" }
+            ]
+        },
+        {
+            group: "亚洲及亚太地区",
+            currencies: [
+                { code: "MOP", name: "MOP - 澳门币" },
+                { code: "TWD", name: "TWD - 新台币" },
+                { code: "KRW", name: "KRW - 韩元" },
+                { code: "SGD", name: "SGD - 新加坡元" },
+                { code: "MYR", name: "MYR - 马来西亚林吉特" },
+                { code: "THB", name: "THB - 泰铢" },
+                { code: "PHP", name: "PHP - 菲律宾比索" },
+                { code: "IDR", name: "IDR - 印尼盾" },
+                { code: "VND", name: "VND - 越南盾" },
+                { code: "INR", name: "INR - 印度卢比" },
+                { code: "AED", name: "AED - 阿联酋迪拉姆" },
+                { code: "AUD", name: "AUD - 澳大利亚元" },
+                { code: "NZD", name: "NZD - 新西兰元" }
+            ]
+        },
+        {
+            group: "美洲及欧洲地区",
+            currencies: [
+                { code: "CAD", name: "CAD - 加拿大元" },
+                { code: "CHF", name: "CHF - 瑞士法郎" },
+                { code: "RUB", name: "RUB - 俄罗斯卢布" },
+                { code: "SEK", name: "SEK - 瑞典克朗" },
+                { code: "NOK", name: "NOK - 挪威克朗" },
+                { code: "DKK", name: "DKK - 丹麦克朗" },
+                { code: "PLN", name: "PLN - 波兰兹罗提" },
+                { code: "TRY", name: "TRY - 土耳其里拉" },
+                { code: "MXN", name: "MXN - 墨西哥比索" },
+                { code: "BRL", name: "BRL - 巴西雷亚尔" },
+                { code: "ARS", name: "ARS - 阿根廷比索" }
+            ]
+        },
+        {
+            group: "非洲及其他地区",
+            currencies: [
+                { code: "ZAR", name: "ZAR - 南非兰特" },
+                { code: "EGP", name: "EGP - 埃及镑" },
+                { code: "SAR", name: "SAR - 沙特里亚尔" },
+                { code: "ILS", name: "ILS - 以色列新谢克尔" },
+                { code: "KWD", name: "KWD - 科威特第纳尔" }
+            ]
+        }
+    ];
+
     const amountInput = document.getElementById('amount');
     const fromCurrency = document.getElementById('from-currency');
     const toCurrency = document.getElementById('to-currency');
@@ -184,29 +240,53 @@
     const resultText = document.getElementById('result-text');
     const updateTime = document.getElementById('update-time');
 
-    // 缓存汇率数据，避免频繁请求 API
     let cachedRates = {};
-    let currentBase = '';
+
+    // 动态初始化币种下拉菜单
+    function initCurrencyOptions() {
+        let fromHtml = "";
+        let toHtml = "";
+
+        currencyData.forEach(group => {
+            let fromGroupHtml = `<optgroup label="${group.group}">`;
+            let toGroupHtml = `<optgroup label="${group.group}">`;
+
+            group.currencies.forEach(cur => {
+                // 默认持有币种选 CNY，兑换币种选 USD
+                const fromSelected = cur.code === "CNY" ? "selected" : "";
+                const toSelected = cur.code === "USD" ? "selected" : "";
+
+                fromGroupHtml += `<option value="${cur.code}" ${fromSelected}>${cur.name}</option>`;
+                toGroupHtml += `<option value="${cur.code}" ${toSelected}>${cur.name}</option>`;
+            });
+
+            fromGroupHtml += `</optgroup>`;
+            toGroupHtml += `</optgroup>`;
+
+            fromHtml += fromGroupHtml;
+            toHtml += toGroupHtml;
+        });
+
+        fromCurrency.innerHTML = fromHtml;
+        toCurrency.innerHTML = toHtml;
+    }
 
     // 获取汇率数据
     async function fetchRates(baseCurrency) {
-        // 如果已经缓存过该基准币种，直接返回
         if (cachedRates[baseCurrency]) {
             return cachedRates[baseCurrency];
         }
 
         try {
-            resultText.innerText = "正在更新汇率...";
+            resultText.innerText = "正在更新最新汇率...";
             resultText.classList.add('loading-text');
             
-            // 使用免费且无需 Token 的 ExchangeRate-API 接口
             const response = await fetch(`https://open.er-api.com/v6/latest/${baseCurrency}`);
             if (!response.ok) throw new Error('网络请求失败');
             
             const data = await response.json();
             
             if (data.result === "success") {
-                // 存入缓存
                 cachedRates[baseCurrency] = {
                     rates: data.rates,
                     time: new Date(data.time_last_update_utc).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
@@ -217,13 +297,13 @@
             }
         } catch (error) {
             console.error(error);
-            resultText.innerText = "汇率获取失败，请稍后再试";
+            resultText.innerText = "网络异常，汇率获取失败";
             resultText.classList.remove('loading-text');
             return null;
         }
     }
 
-    // 计算并显示兑换结果
+    // 计算结果
     async function calculate() {
         const amount = parseFloat(amountInput.value);
         if (isNaN(amount) || amount <= 0) {
@@ -235,9 +315,8 @@
         const from = fromCurrency.value;
         const to = toCurrency.value;
 
-        // 如果前后币种一致
         if (from === to) {
-            resultText.innerText = `${amount.toFixed(2)} ${to}`;
+            resultText.innerText = `${amount} ${to}`;
             resultText.classList.remove('loading-text');
             updateTime.innerText = "无需转换";
             return;
@@ -246,20 +325,20 @@
         const data = await fetchRates(from);
         if (data) {
             const rate = data.rates[to];
-            const convertedAmount = (amount * rate).toFixed(4);
+            // 针对日元、韩元、越南盾等大面额货币，保留4位小数更精准
+            const convertedAmount = (amount * rate).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
             
             resultText.classList.remove('loading-text');
-            resultText.innerText = `${amount} ${from} = ${convertedAmount} ${to}`;
+            resultText.innerText = `${amount.toLocaleString()} ${from} = ${convertedAmount} ${to}`;
             updateTime.innerText = `数据更新时间 (北京时间): ${data.time}`;
         }
     }
 
-    // 监听输入和选择变化
+    // 事件监听
     amountInput.addEventListener('input', calculate);
     fromCurrency.addEventListener('change', calculate);
     toCurrency.addEventListener('change', calculate);
 
-    // 互换币种按钮
     swapBtn.addEventListener('click', () => {
         const temp = fromCurrency.value;
         fromCurrency.value = toCurrency.value;
@@ -267,7 +346,8 @@
         calculate();
     });
 
-    // 页面加载时首次计算
+    // 启动初始化
+    initCurrencyOptions();
     calculate();
 </script>
 
