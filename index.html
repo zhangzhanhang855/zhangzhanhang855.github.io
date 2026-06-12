@@ -3,351 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>宇宙演变互动模拟器</title>
+    <title>实时币种汇率查询</title>
     <style>
-        body, html {
+        :root {
+            --primary-color: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
-            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
-        #canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
         }
-        #ui-container {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 80%;
-            max-width: 800px;
-            background: rgba(20, 20, 30, 0.7);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+
+        .converter-card {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 450px;
+        }
+
+        h2 {
             text-align: center;
-        }
-        #era-title {
-            margin: 0 0 10px 0;
+            margin-bottom: 24px;
+            color: var(--primary-color);
             font-size: 24px;
-            font-weight: 600;
-            background: linear-gradient(90deg, #ff8a00, #e52e71, #9b51e0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
-        #era-desc {
-            font-size: 14px;
-            color: #ccc;
+
+        .input-group {
             margin-bottom: 20px;
-            height: 40px; /* 固定高度防止跳动 */
         }
-        .controls {
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .swap-btn-container {
+            display: flex;
+            justify-content: center;
+            margin: -10px 0 10px 0;
+        }
+
+        .swap-btn {
+            background: #e0e7ff;
+            color: var(--primary-color);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
             display: flex;
             align-items: center;
-            gap: 20px;
+            justify-content: center;
+            transition: background 0.2s, transform 0.2s;
         }
-        #time-slider {
-            flex-grow: 1;
-            cursor: pointer;
-            height: 6px;
-            -webkit-appearance: none;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
-            outline: none;
+
+        .swap-btn:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: rotate(180deg);
         }
-        #time-slider::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #fff;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+
+        .result-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            margin-top: 24px;
         }
-        #play-btn {
-            background: #fff;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 20px;
+
+        .result-text {
+            font-size: 20px;
             font-weight: bold;
-            cursor: pointer;
-            transition: 0.3s;
+            color: var(--primary-color);
+            margin-bottom: 6px;
         }
-        #play-btn:hover {
-            background: #ddd;
-            box-shadow: 0 0 15px rgba(255,255,255,0.5);
-        }
-        #time-display {
-            font-variant-numeric: tabular-nums;
-            font-weight: bold;
-            width: 120px;
-            text-align: right;
-        }
-        #hint {
-            position: absolute;
-            top: 20px;
-            left: 20px;
+
+        .update-time {
             font-size: 12px;
-            color: rgba(255, 255, 255, 0.5);
-            pointer-events: none;
+            color: var(--text-muted);
+        }
+
+        .loading-text {
+            color: var(--text-muted);
+            font-style: italic;
         }
     </style>
 </head>
 <body>
 
-    <canvas id="canvas"></canvas>
+<div class="converter-card">
+    <h2>实时汇率查询</h2>
     
-    <div id="hint">鼠标在画面中移动可产生引力扰动</div>
-
-    <div id="ui-container">
-        <h2 id="era-title">准备大爆炸</h2>
-        <p id="era-desc">时间起点。一切物质和能量聚集在一个极小、极热的奇点中。</p>
-        
-        <div class="controls">
-            <button id="play-btn">播放</button>
-            <input type="range" id="time-slider" min="0" max="13800" value="0" step="10">
-            <div id="time-display">0 亿年</div>
-        </div>
+    <div class="input-group">
+        <label for="amount">输入金额</label>
+        <input type="number" id="amount" value="100" min="0" placeholder="请输入金额">
     </div>
 
+    <div class="input-group">
+        <label for="from-currency">持有币种 (From)</label>
+        <select id="from-currency">
+            <option value="CNY" selected>CNY - 人民币</option>
+            <option value="USD">USD - 美元</option>
+            <option value="EUR">EUR - 欧元</option>
+            <option value="JPY">JPY - 日元</option>
+            <option value="HKD">HKD - 港币</option>
+            <option value="GBP">GBP - 英镑</option>
+            <option value="AUD">AUD - 澳大利亚元</option>
+            <option value="CAD">CAD - 加拿大元</option>
+        </select>
+    </div>
+
+    <div class="swap-btn-container">
+        <button class="swap-btn" id="swap-btn" title="调换币种">⇄</button>
+    </div>
+
+    <div class="input-group">
+        <label for="to-currency">兑换币种 (To)</label>
+        <select id="to-currency">
+            <option value="CNY">CNY - 人民币</option>
+            <option value="USD" selected>USD - 美元</option>
+            <option value="EUR">EUR - 欧元</option>
+            <option value="JPY">JPY - 日元</option>
+            <option value="HKD">HKD - 港币</option>
+            <option value="GBP">GBP - 英镑</option>
+            <option value="AUD">AUD - 澳大利亚元</option>
+            <option value="CAD">CAD - 加拿大元</option>
+        </select>
+    </div>
+
+    <div class="result-box">
+        <div class="result-text" id="result-text">正在获取最新汇率...</div>
+        <div class="update-time" id="update-time"></div>
+    </div>
+</div>
+
 <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    const slider = document.getElementById('time-slider');
-    const playBtn = document.getElementById('play-btn');
-    const timeDisplay = document.getElementById('time-display');
-    const eraTitle = document.getElementById('era-title');
-    const eraDesc = document.getElementById('era-desc');
+    const amountInput = document.getElementById('amount');
+    const fromCurrency = document.getElementById('from-currency');
+    const toCurrency = document.getElementById('to-currency');
+    const swapBtn = document.getElementById('swap-btn');
+    const resultText = document.getElementById('result-text');
+    const updateTime = document.getElementById('update-time');
 
-    let width, height, centerX, centerY;
-    let isPlaying = false;
-    let currentTime = 0; // 0 to 13800 (百万年单位)
-    let animationFrameId;
+    // 缓存汇率数据，避免频繁请求 API
+    let cachedRates = {};
+    let currentBase = '';
 
-    // 鼠标交互
-    let mouse = { x: -1000, y: -1000 };
-    window.addEventListener('mousemove', (e) => {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
+    // 获取汇率数据
+    async function fetchRates(baseCurrency) {
+        // 如果已经缓存过该基准币种，直接返回
+        if (cachedRates[baseCurrency]) {
+            return cachedRates[baseCurrency];
+        }
+
+        try {
+            resultText.innerText = "正在更新汇率...";
+            resultText.classList.add('loading-text');
+            
+            // 使用免费且无需 Token 的 ExchangeRate-API 接口
+            const response = await fetch(`https://open.er-api.com/v6/latest/${baseCurrency}`);
+            if (!response.ok) throw new Error('网络请求失败');
+            
+            const data = await response.json();
+            
+            if (data.result === "success") {
+                // 存入缓存
+                cachedRates[baseCurrency] = {
+                    rates: data.rates,
+                    time: new Date(data.time_last_update_utc).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })
+                };
+                return cachedRates[baseCurrency];
+            } else {
+                throw new Error('获取汇率失败');
+            }
+        } catch (error) {
+            console.error(error);
+            resultText.innerText = "汇率获取失败，请稍后再试";
+            resultText.classList.remove('loading-text');
+            return null;
+        }
+    }
+
+    // 计算并显示兑换结果
+    async function calculate() {
+        const amount = parseFloat(amountInput.value);
+        if (isNaN(amount) || amount <= 0) {
+            resultText.innerText = "0.00";
+            updateTime.innerText = "";
+            return;
+        }
+
+        const from = fromCurrency.value;
+        const to = toCurrency.value;
+
+        // 如果前后币种一致
+        if (from === to) {
+            resultText.innerText = `${amount.toFixed(2)} ${to}`;
+            resultText.classList.remove('loading-text');
+            updateTime.innerText = "无需转换";
+            return;
+        }
+
+        const data = await fetchRates(from);
+        if (data) {
+            const rate = data.rates[to];
+            const convertedAmount = (amount * rate).toFixed(4);
+            
+            resultText.classList.remove('loading-text');
+            resultText.innerText = `${amount} ${from} = ${convertedAmount} ${to}`;
+            updateTime.innerText = `数据更新时间 (北京时间): ${data.time}`;
+        }
+    }
+
+    // 监听输入和选择变化
+    amountInput.addEventListener('input', calculate);
+    fromCurrency.addEventListener('change', calculate);
+    toCurrency.addEventListener('change', calculate);
+
+    // 互换币种按钮
+    swapBtn.addEventListener('click', () => {
+        const temp = fromCurrency.value;
+        fromCurrency.value = toCurrency.value;
+        toCurrency.value = temp;
+        calculate();
     });
 
-    function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-        centerX = width / 2;
-        centerY = height / 2;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    // 粒子系统设定
-    const numParticles = 2000;
-    const particles = [];
-    const numGalaxies = 25;
-    const galaxies = [];
-
-    // 初始化星系中心（用于后期引力汇聚）
-    for(let i = 0; i < numGalaxies; i++) {
-        galaxies.push({
-            x: (Math.random() - 0.5) * window.innerWidth * 1.5,
-            y: (Math.random() - 0.5) * window.innerHeight * 1.5,
-            size: Math.random() * 80 + 20,
-            hue: Math.random() * 360
-        });
-    }
-
-    // 初始化粒子
-    for(let i = 0; i < numParticles; i++) {
-        let gIndex = Math.floor(Math.random() * numGalaxies);
-        particles.push({
-            // 基础膨胀属性
-            angle: Math.random() * Math.PI * 2,
-            distance: Math.random(), // 0-1
-            speed: Math.random() * 0.05 + 0.01,
-            
-            // 星系环绕属性
-            gIndex: gIndex,
-            gAngle: Math.random() * Math.PI * 2,
-            gRadius: Math.pow(Math.random(), 2) * galaxies[gIndex].size, // 越靠近中心粒子越密集
-            gSpeed: (Math.random() - 0.5) * 0.02,
-            
-            // 扰动
-            vx: 0, vy: 0
-        });
-    }
-
-    // 时代定义
-    const eras = [
-        { time: 0, title: "奇点时代", desc: "空间与时间的起点，温度与密度无限大。" },
-        { time: 1, title: "大爆炸与暴胀", desc: "宇宙剧烈膨胀，充满极高温的等离子体（夸克-胶子等离子体）。" },
-        { time: 3.8, title: "黑暗时代", desc: "38万年后，宇宙冷却，质子电子结合成中性氢，光子开始自由穿梭，但还没有恒星发光。" },
-        { time: 200, title: "第一代恒星", desc: "引力使氢和氦气体云坍缩，点亮了宇宙中的第一批恒星。" },
-        { time: 1000, title: "早期星系形成", desc: "恒星和暗物质在引力作用下聚集，形成最早的星系结构。" },
-        { time: 5000, title: "宇宙网与星系群", desc: "星系不断碰撞合并，编织出宏伟的宇宙巨网结构。" },
-        { time: 9200, title: "太阳系诞生", desc: "在银河系的一个边缘旋臂中，我们的太阳和地球开始形成。" },
-        { time: 13800, title: "现今宇宙", desc: "宇宙继续加速膨胀，呈现我们今天所观测到的浩瀚星海。" }
-    ];
-
-    function updateUI(t) {
-        // 更新文字
-        let currentEra = eras[0];
-        for(let i = eras.length - 1; i >= 0; i--) {
-            if(t >= eras[i].time) {
-                currentEra = eras[i];
-                break;
-            }
-        }
-        eraTitle.innerText = currentEra.title;
-        eraDesc.innerText = currentEra.desc;
-
-        // 格式化时间显示
-        if (t < 1) {
-            timeDisplay.innerText = "几十万年";
-        } else if (t < 100) {
-            timeDisplay.innerText = t.toFixed(1) + " 百万年";
-        } else {
-            timeDisplay.innerText = (t / 100).toFixed(2) + " 亿年";
-        }
-    }
-
-    function render() {
-        let t = currentTime; // 0 - 13800
-        let progress = t / 13800; // 0.0 - 1.0
-
-        // --- 背景绘制 ---
-        // 模拟大爆炸初期的亮光和逐渐冷却的黑暗
-        if (progress < 0.001) {
-            ctx.fillStyle = `rgba(255, 255, 255, 1)`; // 极度刺眼
-        } else if (progress < 0.02) { // 黑暗时代降临前
-            let alpha = 1 - (progress / 0.02);
-            ctx.fillStyle = `rgba(255, 150, 50, ${alpha})`; // 炽热变暗
-        } else {
-            // 留下拖尾效果模拟运动
-            ctx.fillStyle = `rgba(5, 5, 10, ${progress > 0.1 ? 0.3 : 1})`; 
-        }
-        ctx.fillRect(0, 0, width, height);
-
-        // 宇宙膨胀因子
-        let expansion = Math.pow(progress, 0.3) * Math.max(width, height); 
-        if (progress === 0) expansion = 0;
-
-        // 星系汇聚因子 (从黑暗时代后开始逐渐增强)
-        let clusterFactor = Math.max(0, (progress - 0.05) / 0.95);
-        clusterFactor = Math.pow(clusterFactor, 2); // 非线性汇聚
-
-        // 粒子透明度基础值
-        let globalAlpha = 1;
-        if (progress > 0.001 && progress < 0.05) {
-            globalAlpha = 0.1; // 黑暗时代，粒子暗淡
-        } else if (progress >= 0.05) {
-            globalAlpha = 0.1 + clusterFactor * 0.9; // 恒星点亮
-        }
-
-        // --- 绘制粒子 ---
-        for(let i = 0; i < numParticles; i++) {
-            let p = particles[i];
-
-            // 1. 基础膨胀位置 (大爆炸)
-            let ex = centerX + Math.cos(p.angle) * p.distance * expansion;
-            let ey = centerY + Math.sin(p.angle) * p.distance * expansion;
-
-            // 2. 星系盘旋位置
-            p.gAngle += p.gSpeed;
-            let targetGalaxy = galaxies[p.gIndex];
-            // 随宇宙膨胀，星系之间的距离也在拉开，这里简化为固定比例的星系坐标叠加膨胀
-            let gx = centerX + targetGalaxy.x * Math.pow(progress, 0.5) + Math.cos(p.gAngle) * p.gRadius;
-            let gy = centerY + targetGalaxy.y * Math.pow(progress, 0.5) + Math.sin(p.gAngle) * p.gRadius;
-
-            // 3. 混合位置
-            let finalX = ex * (1 - clusterFactor) + gx * clusterFactor;
-            let finalY = ey * (1 - clusterFactor) + gy * clusterFactor;
-
-            // 4. 鼠标引力互动
-            let dx = mouse.x - finalX;
-            let dy = mouse.y - finalY;
-            let dist = Math.sqrt(dx*dx + dy*dy);
-            if(dist < 150 && clusterFactor > 0.2) {
-                // 鼠标吸引力
-                p.vx += (dx / dist) * 0.5;
-                p.vy += (dy / dist) * 0.5;
-            }
-            
-            // 摩擦力衰减
-            p.vx *= 0.9;
-            p.vy *= 0.9;
-            
-            finalX += p.vx;
-            finalY += p.vy;
-
-            // 绘制
-            let color = '#fff';
-            if (progress < 0.001) color = '#fff';
-            else if (progress < 0.05) color = '#555'; // 黑暗时代
-            else {
-                // 逐渐显现星系颜色
-                let hue = targetGalaxy.hue + (Math.random() * 20 - 10);
-                color = `hsl(${hue}, 80%, ${60 + Math.random()*40}%)`;
-            }
-
-            ctx.fillStyle = color;
-            ctx.globalAlpha = globalAlpha * (0.5 + Math.random()*0.5); // 闪烁效果
-            ctx.beginPath();
-            // 粒子大小随汇聚程度微调
-            let pSize = progress < 0.001 ? 3 : (1 + clusterFactor * 1.5);
-            ctx.arc(finalX, finalY, pSize, 0, Math.PI * 2);
-            ctx.fill();
-        }
-
-        ctx.globalAlpha = 1;
-    }
-
-    function loop() {
-        if (isPlaying) {
-            // 时间流逝速度非线性，前期慢（为了看清爆炸），后期快
-            let step = currentTime < 10 ? 0.2 : (currentTime < 500 ? 5 : 20);
-            currentTime += step;
-            if (currentTime >= 13800) {
-                currentTime = 13800;
-                isPlaying = false;
-                playBtn.innerText = "重置";
-            }
-            slider.value = currentTime;
-            updateUI(currentTime);
-        }
-        render();
-        animationFrameId = requestAnimationFrame(loop);
-    }
-
-    // 事件监听
-    slider.addEventListener('input', (e) => {
-        currentTime = parseFloat(e.target.value);
-        updateUI(currentTime);
-        if(!isPlaying) render(); // 暂停状态下拖拽也能实时更新画面
-    });
-
-    playBtn.addEventListener('click', () => {
-        if (currentTime >= 13800) {
-            currentTime = 0;
-            slider.value = 0;
-        }
-        isPlaying = !isPlaying;
-        playBtn.innerText = isPlaying ? "暂停" : "播放";
-    });
-
-    // 初始化第一帧
-    updateUI(currentTime);
-    render();
-    loop();
-
+    // 页面加载时首次计算
+    calculate();
 </script>
+
 </body>
 </html>
